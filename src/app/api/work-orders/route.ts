@@ -1,0 +1,100 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { withAuth, parseBody } from "@/lib/api-helpers";
+import { workOrderCreateSchema } from "@/lib/validations";
+import { WorkOrderView } from "@/types";
+
+function mapWorkOrder(wo: any): WorkOrderView {
+  return {
+    id: wo.id,
+    title: wo.title,
+    description: wo.description,
+    status: wo.status,
+    priority: wo.priority,
+    category: wo.category,
+    photos: wo.photos as string[] | null,
+    estimatedCost: wo.estimatedCost ? Number(wo.estimatedCost) : null,
+    actualCost: wo.actualCost ? Number(wo.actualCost) : null,
+    scheduledDate: wo.scheduledDate?.toISOString() ?? null,
+    completedDate: wo.completedDate?.toISOString() ?? null,
+    buildingId: wo.buildingId,
+    buildingAddress: wo.building?.address ?? "",
+    unitId: wo.unitId,
+    unitNumber: wo.unit?.unitNumber ?? null,
+    tenantId: wo.tenantId,
+    tenantName: wo.tenant?.name ?? null,
+    vendorId: wo.vendorId,
+    vendorName: wo.vendor?.name ?? null,
+    assignedToId: wo.assignedToId,
+    assignedToName: wo.assignedTo?.name ?? null,
+    createdById: wo.createdById,
+    createdByName: wo.createdBy?.name ?? null,
+    commentCount: wo._count?.comments ?? 0,
+    createdAt: wo.createdAt?.toISOString(),
+    updatedAt: wo.updatedAt?.toISOString(),
+  };
+}
+
+const include = {
+  building: { select: { address: true } },
+  unit: { select: { unitNumber: true } },
+  tenant: { select: { name: true } },
+  vendor: { select: { name: true } },
+  assignedTo: { select: { name: true } },
+  createdBy: { select: { name: true } },
+  _count: { select: { comments: true } },
+};
+
+export const GET = withAuth(async (req, { user }) => {
+  const url = new URL(req.url);
+  const buildingId = url.searchParams.get("buildingId");
+  const status = url.searchParams.get("status");
+  const priority = url.searchParams.get("priority");
+  const category = url.searchParams.get("category");
+
+  const where: any = {};
+  if (buildingId) where.buildingId = buildingId;
+  else if (user.role !== "ADMIN" && user.assignedProperties?.length) {
+    where.buildingId = { in: user.assignedProperties };
+  }
+  if (status) where.status = status;
+  if (priority) where.priority = priority;
+  if (category) where.category = category;
+
+  const orders = await prisma.workOrder.findMany({
+    where,
+    include,
+    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+  });
+
+  return NextResponse.json(orders.map(mapWorkOrder));
+}, "maintenance");
+
+export const POST = withAuth(async (req, { user }) => {
+  const data = await parseBody(req, workOrderCreateSchema);
+
+  const wo = await prisma.workOrder.create({
+    data: {
+      title: data.title,
+      description: data.description,
+      status: data.status as any,
+      priority: data.priority as any,
+      category: data.category as any,
+      photos: data.photos ?? undefined,
+      estimatedCost: data.estimatedCost,
+      actualCost: data.actualCost,
+      scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
+      completedDate: data.completedDate ? new Date(data.completedDate) : null,
+      buildingId: data.buildingId,
+      unitId: data.unitId || null,
+      tenantId: data.tenantId || null,
+      vendorId: data.vendorId || null,
+      assignedToId: data.assignedToId || null,
+      createdById: user.id,
+    },
+    include,
+  });
+
+  return NextResponse.json(mapWorkOrder(wo), { status: 201 });
+}, "maintenance");
+

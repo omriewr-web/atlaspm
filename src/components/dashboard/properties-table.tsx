@@ -1,0 +1,50 @@
+"use client";
+
+import { BuildingView } from "@/types";
+import { fmt$, pct } from "@/lib/utils";
+import { useAppStore } from "@/stores/app-store";
+
+interface Props {
+  buildings: BuildingView[];
+}
+
+export default function PropertiesTable({ buildings }: Props) {
+  const { setSelectedBuildingId } = useAppStore();
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Property</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Units</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Occ.</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Vacant</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Market Rent</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Balance</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Occupancy</th>
+          </tr>
+        </thead>
+        <tbody>
+          {buildings.map((b) => (
+            <tr
+              key={b.id}
+              className="border-b border-border/50 hover:bg-card-hover cursor-pointer transition-colors"
+              onClick={() => setSelectedBuildingId(b.id)}
+            >
+              <td className="px-3 py-2 text-text-primary">{b.address}</td>
+              <td className="px-3 py-2 text-right text-text-muted">{b.totalUnits}</td>
+              <td className="px-3 py-2 text-right text-green-400">{b.occupied}</td>
+              <td className="px-3 py-2 text-right text-amber-400">{b.vacant}</td>
+              <td className="px-3 py-2 text-right text-text-muted">{fmt$(b.totalMarketRent)}</td>
+              <td className="px-3 py-2 text-right text-red-400">{fmt$(b.totalBalance)}</td>
+              <td className="px-3 py-2 text-right text-text-muted">
+                {b.totalUnits > 0 ? pct((b.occupied / b.totalUnits) * 100) : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

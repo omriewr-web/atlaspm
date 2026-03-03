@@ -96,13 +96,59 @@ export interface PortfolioMetrics {
 }
 
 export const ROLE_PERMISSIONS: Record<UserRole, Record<string, boolean>> = {
-  ADMIN:     { allProps: true, dash: true, notes: true, pay: true, legal: true, upload: true, users: true, vac: true, lease: true, fin: true, reports: true, edit: true, email: true },
-  PM:        { allProps: false, dash: true, notes: true, pay: true, legal: true, upload: true, users: false, vac: true, lease: true, fin: true, reports: true, edit: true, email: true },
-  COLLECTOR: { allProps: false, dash: true, notes: true, pay: true, legal: false, upload: false, users: false, vac: false, lease: false, fin: true, reports: true, edit: true, email: true },
-  OWNER:     { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: true, reports: true, edit: false, email: false },
-  BROKER:    { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: false, email: false },
+  ADMIN:     { allProps: true, dash: true, notes: true, pay: true, legal: true, upload: true, users: true, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true },
+  PM:        { allProps: false, dash: true, notes: true, pay: true, legal: true, upload: true, users: false, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true },
+  COLLECTOR: { allProps: false, dash: true, notes: true, pay: true, legal: false, upload: false, users: false, vac: false, lease: false, fin: true, reports: true, edit: true, email: true, maintenance: true },
+  OWNER:     { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: true, reports: true, edit: false, email: false, maintenance: false },
+  BROKER:    { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: false, email: false, maintenance: false },
 };
 
 export function hasPermission(role: UserRole, perm: string): boolean {
   return ROLE_PERMISSIONS[role]?.[perm] ?? false;
+}
+
+// ── Work Order Types ─────────────────────────────────────────────
+
+export type WorkOrderStatus = "OPEN" | "IN_PROGRESS" | "ON_HOLD" | "COMPLETED";
+export type WorkOrderPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type WorkOrderCategory = "PLUMBING" | "ELECTRICAL" | "HVAC" | "APPLIANCE" | "GENERAL" | "OTHER";
+
+export interface WorkOrderView {
+  id: string;
+  title: string;
+  description: string;
+  status: WorkOrderStatus;
+  priority: WorkOrderPriority;
+  category: WorkOrderCategory;
+  photos: string[] | null;
+  estimatedCost: number | null;
+  actualCost: number | null;
+  scheduledDate: string | null;
+  completedDate: string | null;
+  buildingId: string;
+  buildingAddress: string;
+  unitId: string | null;
+  unitNumber: string | null;
+  tenantId: string | null;
+  tenantName: string | null;
+  vendorId: string | null;
+  vendorName: string | null;
+  assignedToId: string | null;
+  assignedToName: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  commentCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VendorView {
+  id: string;
+  name: string;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  specialty: string | null;
+  hourlyRate: number | null;
+  notes: string | null;
 }

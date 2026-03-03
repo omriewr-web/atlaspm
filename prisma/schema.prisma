@@ -35,6 +35,9 @@ model User {
   legalNotes    LegalNote[]
   tasks         Task[]
   emails        EmailLog[]
+  assignedWorkOrders  WorkOrder[] @relation("WorkOrderAssignee")
+  createdWorkOrders   WorkOrder[] @relation("WorkOrderCreator")
+  workOrderComments   WorkOrderComment[]
   @@map("users")
 }
 
@@ -72,6 +75,8 @@ model Building {
   units          Unit[]
   assignedUsers  UserProperty[]
   importBatches  ImportBatch[]
+  workOrders     WorkOrder[]
+  maintenanceSchedules MaintenanceSchedule[]
   @@map("buildings")
 }
 
@@ -84,6 +89,8 @@ model Unit {
   building    Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   tenant      Tenant?
   vacancyInfo VacancyInfo?
+  workOrders  WorkOrder[]
+  maintenanceSchedules MaintenanceSchedule[]
   @@unique([buildingId, unitNumber])
   @@map("units")
 }
@@ -122,6 +129,7 @@ model Tenant {
   legalCase       LegalCase?
   tasks           Task[]
   emails          EmailLog[]
+  workOrders      WorkOrder[]
   @@map("tenants")
 }
 
@@ -307,4 +315,114 @@ model EmailLog {
   sentBy         User      @relation(fields: [sentById], references: [id])
   @@index([tenantId, sentAt(sort: Desc)])
   @@map("email_logs")
+}
+
+// ── Work Order & Maintenance ──────────────────────────────────────
+
+enum WorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum WorkOrderCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC
+  APPLIANCE
+  GENERAL
+  OTHER
+}
+
+enum MaintenanceFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+
+model Vendor {
+  id         String   @id @default(cuid())
+  name       String
+  company    String?
+  email      String?
+  phone      String?
+  specialty  String?
+  hourlyRate Decimal? @db.Decimal(10, 2)
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  workOrders WorkOrder[]
+  @@map("vendors")
+}
+
+model WorkOrder {
+  id             String            @id @default(cuid())
+  title          String
+  description    String            @db.Text
+  status         WorkOrderStatus   @default(OPEN)
+  priority       WorkOrderPriority @default(MEDIUM)
+  category       WorkOrderCategory @default(GENERAL)
+  photos         Json?
+  estimatedCost  Decimal?          @db.Decimal(10, 2)
+  actualCost     Decimal?          @db.Decimal(10, 2)
+  scheduledDate  DateTime?
+  completedDate  DateTime?
+  buildingId     String
+  unitId         String?
+  tenantId       String?
+  vendorId       String?
+  assignedToId   String?
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  building       Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit           Unit?             @relation(fields: [unitId], references: [id])
+  tenant         Tenant?           @relation(fields: [tenantId], references: [id])
+  vendor         Vendor?           @relation(fields: [vendorId], references: [id])
+  assignedTo     User?             @relation("WorkOrderAssignee", fields: [assignedToId], references: [id])
+  createdBy      User?             @relation("WorkOrderCreator", fields: [createdById], references: [id])
+  comments       WorkOrderComment[]
+  @@index([buildingId])
+  @@index([status])
+  @@index([priority])
+  @@map("work_orders")
+}
+
+model WorkOrderComment {
+  id          String    @id @default(cuid())
+  workOrderId String
+  authorId    String
+  text        String    @db.Text
+  photos      Json?
+  createdAt   DateTime  @default(now())
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  author      User      @relation(fields: [authorId], references: [id])
+  @@index([workOrderId, createdAt(sort: Desc)])
+  @@map("work_order_comments")
+}
+
+model MaintenanceSchedule {
+  id                 String               @id @default(cuid())
+  title              String
+  description        String?              @db.Text
+  frequency          MaintenanceFrequency
+  nextDueDate        DateTime
+  autoCreateWorkOrder Boolean             @default(true)
+  buildingId         String
+  unitId             String?
+  building           Building             @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit               Unit?                @relation(fields: [unitId], references: [id])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  @@index([nextDueDate])
+  @@map("maintenance_schedules")
 }
