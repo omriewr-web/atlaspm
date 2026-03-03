@@ -1,0 +1,310 @@
+// ICER Property Tracker - Database Schema
+// Stack: PostgreSQL via Supabase + Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PM
+  COLLECTOR
+  OWNER
+  BROKER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  username      String    @unique
+  passwordHash  String
+  role          UserRole  @default(COLLECTOR)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  assignedProperties UserProperty[]
+  notes         TenantNote[]
+  commLogs      CommLog[]
+  payments      Payment[]
+  legalNotes    LegalNote[]
+  tasks         Task[]
+  emails        EmailLog[]
+  @@map("users")
+}
+
+model UserProperty {
+  id         String   @id @default(cuid())
+  userId     String
+  buildingId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  @@unique([userId, buildingId])
+  @@map("user_properties")
+}
+
+model Building {
+  id             String   @id @default(cuid())
+  yardiId        String   @unique
+  address        String
+  altAddress     String?
+  entity         String?
+  portfolio      String?
+  region         String?
+  zip            String?
+  block          String?
+  lot            String?
+  type           String   @default("Residential")
+  owner          String?
+  manager        String?
+  arTeam         String?
+  apTeam         String?
+  headPortfolio  String?
+  mgmtStartDate  DateTime?
+  totalUnits     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  units          Unit[]
+  assignedUsers  UserProperty[]
+  importBatches  ImportBatch[]
+  @@map("buildings")
+}
+
+model Unit {
+  id          String   @id @default(cuid())
+  buildingId  String
+  unitNumber  String
+  unitType    String?
+  isVacant    Boolean  @default(false)
+  building    Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  tenant      Tenant?
+  vacancyInfo VacancyInfo?
+  @@unique([buildingId, unitNumber])
+  @@map("units")
+}
+
+model Tenant {
+  id              String   @id @default(cuid())
+  unitId          String   @unique
+  yardiResidentId String?  @unique
+  name            String
+  email           String?
+  phone           String?
+  marketRent      Decimal  @default(0) @db.Decimal(10, 2)
+  legalRent       Decimal  @default(0) @db.Decimal(10, 2)
+  dhcrLegalRent   Decimal  @default(0) @db.Decimal(10, 2)
+  prefRent        Decimal  @default(0) @db.Decimal(10, 2)
+  actualRent      Decimal  @default(0) @db.Decimal(10, 2)
+  chargeCode      String?
+  isStabilized    Boolean  @default(false)
+  deposit         Decimal  @default(0) @db.Decimal(10, 2)
+  moveInDate      DateTime?
+  leaseExpiration DateTime?
+  moveOutDate     DateTime?
+  balance         Decimal  @default(0) @db.Decimal(10, 2)
+  arrearsCategory String   @default("current")
+  arrearsDays     Int      @default(0)
+  monthsOwed      Decimal  @default(0) @db.Decimal(5, 1)
+  leaseStatus     String   @default("active")
+  collectionScore Int      @default(0)
+  overrides       Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  unit            Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  notes           TenantNote[]
+  commLogs        CommLog[]
+  payments        Payment[]
+  legalCase       LegalCase?
+  tasks           Task[]
+  emails          EmailLog[]
+  @@map("tenants")
+}
+
+enum NoteCategory {
+  GENERAL
+  COLLECTION
+  PAYMENT
+  LEGAL
+  LEASE
+  MAINTENANCE
+}
+
+model TenantNote {
+  id        String       @id @default(cuid())
+  tenantId  String
+  authorId  String
+  text      String       @db.Text
+  category  NoteCategory @default(GENERAL)
+  createdAt DateTime     @default(now())
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author    User         @relation(fields: [authorId], references: [id])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("tenant_notes")
+}
+
+enum CommType {
+  PHONE
+  EMAIL
+  LETTER
+  IN_PERSON
+  TEXT_MSG
+  LEGAL_NOTICE
+  OTHER
+}
+
+model CommLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  authorId  String
+  type      CommType
+  summary   String   @db.Text
+  outcome   String?
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("comm_logs")
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  recordedBy  String
+  amount      Decimal  @db.Decimal(10, 2)
+  date        DateTime
+  method      String?
+  reference   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recorder    User     @relation(fields: [recordedBy], references: [id])
+  @@index([tenantId, date(sort: Desc)])
+  @@map("payments")
+}
+
+enum LegalStage {
+  NOTICE_SENT
+  HOLDOVER
+  NONPAYMENT
+  COURT_DATE
+  STIPULATION
+  JUDGMENT
+  WARRANT
+  EVICTION
+  SETTLED
+}
+
+model LegalCase {
+  id          String     @id @default(cuid())
+  tenantId    String     @unique
+  inLegal     Boolean    @default(true)
+  stage       LegalStage @default(NOTICE_SENT)
+  caseNumber  String?
+  attorney    String?
+  filedDate   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  notes       LegalNote[]
+  @@map("legal_cases")
+}
+
+model LegalNote {
+  id          String     @id @default(cuid())
+  legalCaseId String
+  authorId    String
+  text        String     @db.Text
+  stage       LegalStage
+  createdAt   DateTime   @default(now())
+  legalCase   LegalCase  @relation(fields: [legalCaseId], references: [id], onDelete: Cascade)
+  author      User       @relation(fields: [authorId], references: [id])
+  @@index([legalCaseId, createdAt(sort: Desc)])
+  @@map("legal_notes")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  tenantId    String
+  createdById String
+  type        String
+  description String
+  dueDate     DateTime?
+  done        Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  @@index([tenantId])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model VacancyInfo {
+  id           String   @id @default(cuid())
+  unitId       String   @unique
+  condition    String?
+  accessType   String?
+  accessNotes  String?
+  proposedRent Decimal? @db.Decimal(10, 2)
+  readyDate    DateTime?
+  internalNotes String?  @db.Text
+  brokerNotes  Json?
+  updatedAt    DateTime @updatedAt
+  unit         Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  @@map("vacancy_info")
+}
+
+model DhcrRent {
+  id           String   @id @default(cuid())
+  buildingId   String
+  unitNumber   String
+  legalRent    Decimal  @db.Decimal(10, 2)
+  regId        String?
+  dhcrAddress  String?
+  importedAt   DateTime @default(now())
+  @@unique([buildingId, unitNumber])
+  @@map("dhcr_rents")
+}
+
+model ImportBatch {
+  id          String   @id @default(cuid())
+  buildingId  String?
+  filename    String
+  format      String
+  recordCount Int      @default(0)
+  status      String   @default("completed")
+  errors      Json?
+  importedAt  DateTime @default(now())
+  building    Building? @relation(fields: [buildingId], references: [id])
+  @@map("import_batches")
+}
+
+enum EmailType {
+  DEMAND_LETTER
+  PAYMENT_REMINDER
+  LATE_NOTICE
+  COLLECTION_REPORT
+  LEASE_RENEWAL
+  CUSTOM
+}
+
+model EmailLog {
+  id             String    @id @default(cuid())
+  tenantId       String?
+  sentById       String
+  type           EmailType
+  subject        String
+  body           String    @db.Text
+  recipientEmail String
+  status         String    @default("sent")
+  sentAt         DateTime  @default(now())
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
+  sentBy         User      @relation(fields: [sentById], references: [id])
+  @@index([tenantId, sentAt(sort: Desc)])
+  @@map("email_logs")
+}
