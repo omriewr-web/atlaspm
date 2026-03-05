@@ -22,7 +22,7 @@ interface Props {
 }
 
 export default function WorkOrderDetailModal({ workOrderId, onClose }: Props) {
-  const { data: wo, isLoading } = useWorkOrder(workOrderId);
+  const { data: wo, isLoading, isError } = useWorkOrder(workOrderId);
   const updateWO = useUpdateWorkOrder();
   const deleteWO = useDeleteWorkOrder();
   const { data: vendors } = useVendors();
@@ -91,6 +91,8 @@ export default function WorkOrderDetailModal({ workOrderId, onClose }: Props) {
     <Modal open={!!workOrderId} onClose={onClose} title={wo?.title || "Work Order"} wide>
       {isLoading ? (
         <LoadingSpinner />
+      ) : isError ? (
+        <div className="text-center py-8 text-red-400 text-sm">Failed to load work order. Please try again.</div>
       ) : wo ? (
         <div>
           <div className="flex gap-1 border-b border-border mb-4">

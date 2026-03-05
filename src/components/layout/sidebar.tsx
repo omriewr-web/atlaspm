@@ -14,6 +14,7 @@ import {
   Database,
   Users,
   Wrench,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasPermission, UserRole } from "@/types";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/vacancies", label: "Vacancies", icon: DoorOpen, perm: "vac" },
   { href: "/leases", label: "Leases", icon: FileText, perm: "lease" },
   { href: "/maintenance", label: "Work Orders", icon: Wrench, perm: "maintenance" },
+  { href: "/compliance", label: "Compliance", icon: Shield, perm: "compliance" },
   { href: "/reports", label: "Reports", icon: BarChart3, perm: "reports" },
   { href: "/data", label: "Data Management", icon: Database, perm: "upload" },
   { href: "/users", label: "Users", icon: Users, perm: "users" },

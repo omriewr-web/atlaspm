@@ -126,11 +126,11 @@ export interface PortfolioMetrics {
 }
 
 export const ROLE_PERMISSIONS: Record<UserRole, Record<string, boolean>> = {
-  ADMIN:     { allProps: true, dash: true, notes: true, pay: true, legal: true, upload: true, users: true, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true },
-  PM:        { allProps: false, dash: true, notes: true, pay: true, legal: true, upload: true, users: false, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true },
-  COLLECTOR: { allProps: false, dash: true, notes: true, pay: true, legal: false, upload: false, users: false, vac: false, lease: false, fin: true, reports: true, edit: true, email: true, maintenance: true },
-  OWNER:     { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: true, reports: true, edit: false, email: false, maintenance: false },
-  BROKER:    { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: false, email: false, maintenance: false },
+  ADMIN:     { allProps: true, dash: true, notes: true, pay: true, legal: true, upload: true, users: true, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true },
+  PM:        { allProps: false, dash: true, notes: true, pay: true, legal: true, upload: true, users: false, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true },
+  COLLECTOR: { allProps: false, dash: true, notes: true, pay: true, legal: false, upload: false, users: false, vac: false, lease: false, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true },
+  OWNER:     { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: true, reports: true, edit: false, email: false, maintenance: false, compliance: false },
+  BROKER:    { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: false, email: false, maintenance: false, compliance: false },
 };
 
 export function hasPermission(role: UserRole, perm: string): boolean {
@@ -181,4 +181,96 @@ export interface VendorView {
   specialty: string | null;
   hourlyRate: number | null;
   notes: string | null;
+}
+
+// ── Compliance & Violation Types ────────────────────────────────
+
+export type ViolationSource = "HPD" | "DOB" | "ECB" | "FDNY" | "DSNY" | "DOHMH" | "DOB_COMPLAINTS" | "HPD_COMPLAINTS" | "HPD_LITIGATION";
+export type ViolationClass = "A" | "B" | "C" | "I" | "CLASS1" | "CLASS2" | "CLASS3";
+export type ViolationSeverity = "IMMEDIATELY_HAZARDOUS" | "HAZARDOUS" | "NON_HAZARDOUS" | "INFO";
+export type ComplianceCategory = "LOCAL_LAW" | "INSPECTION" | "FILING" | "CUSTOM";
+export type ComplianceFrequency = "ANNUAL" | "SEMI_ANNUAL" | "QUARTERLY" | "FIVE_YEAR" | "FOUR_YEAR" | "ONE_TIME" | "ON_EVENT";
+export type ComplianceStatus = "COMPLIANT" | "NON_COMPLIANT" | "PENDING" | "OVERDUE" | "SCHEDULED" | "NOT_APPLICABLE";
+
+export interface ViolationView {
+  id: string;
+  buildingId: string;
+  buildingAddress: string;
+  source: ViolationSource;
+  externalId: string;
+  class: ViolationClass | null;
+  severity: ViolationSeverity | null;
+  description: string;
+  inspectionDate: string | null;
+  issuedDate: string | null;
+  currentStatus: string | null;
+  penaltyAmount: number;
+  respondByDate: string | null;
+  certifiedDismissDate: string | null;
+  correctionDate: string | null;
+  unitNumber: string | null;
+  novDescription: string | null;
+  hearingDate: string | null;
+  hearingStatus: string | null;
+  linkedWorkOrderId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  daysUntilCure: number | null;
+}
+
+export interface ComplianceItemView {
+  id: string;
+  buildingId: string;
+  buildingAddress: string;
+  type: string;
+  category: ComplianceCategory;
+  name: string;
+  description: string;
+  dueDate: string | null;
+  frequency: ComplianceFrequency;
+  status: ComplianceStatus;
+  lastCompletedDate: string | null;
+  nextDueDate: string | null;
+  assignedVendorId: string | null;
+  assignedVendorName: string | null;
+  cost: number;
+  filedBy: string | null;
+  certificateUrl: string | null;
+  notes: string | null;
+  linkedViolationId: string | null;
+  isCustom: boolean;
+  createdAt: string;
+  updatedAt: string;
+  daysUntilDue: number | null;
+}
+
+export interface ViolationStats {
+  totalOpen: number;
+  classACount: number;
+  classBCount: number;
+  classCCount: number;
+  totalPenalties: number;
+  upcomingHearings: number;
+}
+
+export interface ComplianceStats {
+  total: number;
+  compliant: number;
+  nonCompliant: number;
+  overdue: number;
+  pending: number;
+  upcomingThisMonth: number;
+}
+
+export interface BuildingScorecard {
+  buildingId: string;
+  address: string;
+  classACount: number;
+  classBCount: number;
+  classCCount: number;
+  pendingFines: number;
+  complianceRate: number;
+  overdueItems: number;
+  healthScore: number;
+  healthLabel: string;
 }

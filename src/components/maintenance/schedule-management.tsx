@@ -182,7 +182,7 @@ export default function ScheduleManagement() {
                 type="checkbox"
                 checked={form.autoCreateWorkOrder}
                 onChange={(e) => setForm({ ...form, autoCreateWorkOrder: e.target.checked })}
-                className="rounded border-border"
+                className="rounded"
               />
               <label className="text-xs text-text-muted">Auto-create work order</label>
             </div>

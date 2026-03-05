@@ -84,6 +84,9 @@ model Building {
   importBatches  ImportBatch[]
   workOrders     WorkOrder[]
   maintenanceSchedules MaintenanceSchedule[]
+  violations     Violation[]
+  complianceItems ComplianceItem[]
+  violationSyncLogs ViolationSyncLog[]
   @@map("buildings")
 }
 
@@ -368,6 +371,7 @@ model Vendor {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   workOrders WorkOrder[]
+  complianceItems ComplianceItem[]
   @@map("vendors")
 }
 
@@ -398,6 +402,7 @@ model WorkOrder {
   assignedTo     User?             @relation("WorkOrderAssignee", fields: [assignedToId], references: [id])
   createdBy      User?             @relation("WorkOrderCreator", fields: [createdById], references: [id])
   comments       WorkOrderComment[]
+  violations     Violation[]
   @@index([buildingId])
   @@index([status])
   @@index([priority])
@@ -432,4 +437,139 @@ model MaintenanceSchedule {
   updatedAt          DateTime             @updatedAt
   @@index([nextDueDate])
   @@map("maintenance_schedules")
+}
+
+// ── Compliance & Violations ─────────────────────────────────────
+
+enum ViolationSource {
+  HPD
+  DOB
+  ECB
+  FDNY
+  DSNY
+  DOHMH
+  DOB_COMPLAINTS
+  HPD_COMPLAINTS
+  HPD_LITIGATION
+}
+
+enum ViolationClass {
+  A
+  B
+  C
+  I
+  CLASS1
+  CLASS2
+  CLASS3
+}
+
+enum ViolationSeverity {
+  IMMEDIATELY_HAZARDOUS
+  HAZARDOUS
+  NON_HAZARDOUS
+  INFO
+}
+
+enum ComplianceCategory {
+  LOCAL_LAW
+  INSPECTION
+  FILING
+  CUSTOM
+}
+
+enum ComplianceFrequency {
+  ANNUAL
+  SEMI_ANNUAL
+  QUARTERLY
+  FIVE_YEAR
+  FOUR_YEAR
+  ONE_TIME
+  ON_EVENT
+}
+
+enum ComplianceStatus {
+  COMPLIANT
+  NON_COMPLIANT
+  PENDING
+  OVERDUE
+  SCHEDULED
+  NOT_APPLICABLE
+}
+
+model Violation {
+  id                  String            @id @default(cuid())
+  buildingId          String
+  source              ViolationSource
+  externalId          String
+  class               ViolationClass?
+  severity            ViolationSeverity?
+  description         String            @db.Text
+  inspectionDate      DateTime?
+  issuedDate          DateTime?
+  currentStatus       String?
+  penaltyAmount       Decimal           @default(0) @db.Decimal(10, 2)
+  respondByDate       DateTime?
+  certifiedDismissDate DateTime?
+  correctionDate      DateTime?
+  unitNumber          String?
+  novDescription      String?           @db.Text
+  hearingDate         DateTime?
+  hearingStatus       String?
+  linkedWorkOrderId   String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  building            Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  linkedWorkOrder     WorkOrder?        @relation(fields: [linkedWorkOrderId], references: [id])
+  complianceItems     ComplianceItem[]
+  @@unique([source, externalId])
+  @@index([buildingId])
+  @@index([source])
+  @@index([currentStatus])
+  @@index([hearingDate])
+  @@index([respondByDate])
+  @@map("violations")
+}
+
+model ComplianceItem {
+  id                String             @id @default(cuid())
+  buildingId        String
+  type              String
+  category          ComplianceCategory
+  name              String
+  description       String             @db.Text
+  dueDate           DateTime?
+  frequency         ComplianceFrequency
+  status            ComplianceStatus   @default(PENDING)
+  lastCompletedDate DateTime?
+  nextDueDate       DateTime?
+  assignedVendorId  String?
+  cost              Decimal            @default(0) @db.Decimal(10, 2)
+  filedBy           String?
+  certificateUrl    String?
+  notes             String?            @db.Text
+  linkedViolationId String?
+  isCustom          Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  building          Building           @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  assignedVendor    Vendor?            @relation(fields: [assignedVendorId], references: [id])
+  linkedViolation   Violation?         @relation(fields: [linkedViolationId], references: [id])
+  @@index([buildingId])
+  @@index([status])
+  @@index([nextDueDate])
+  @@index([category])
+  @@map("compliance_items")
+}
+
+model ViolationSyncLog {
+  id           String   @id @default(cuid())
+  buildingId   String?
+  source       ViolationSource
+  syncedAt     DateTime @default(now())
+  newCount     Int      @default(0)
+  updatedCount Int      @default(0)
+  status       String   @default("completed")
+  building     Building? @relation(fields: [buildingId], references: [id])
+  @@index([buildingId, syncedAt(sort: Desc)])
+  @@map("violation_sync_logs")
 }

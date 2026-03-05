@@ -1,8 +1,11 @@
 "use client";
 
-import { Building2, Users, AlertTriangle, DollarSign, Scale, FileText } from "lucide-react";
+import Link from "next/link";
+import { Building2, Users, AlertTriangle, DollarSign, Scale, FileText, Shield } from "lucide-react";
 import { useMetrics } from "@/hooks/use-metrics";
 import { useBuildings } from "@/hooks/use-buildings";
+import { useViolationStats } from "@/hooks/use-violations";
+import { useComplianceItems } from "@/hooks/use-compliance";
 import StatCard from "@/components/ui/stat-card";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import { fmt$, pct } from "@/lib/utils";
@@ -55,6 +58,8 @@ export default function DashboardContent() {
         </div>
       </div>
 
+      <ComplianceWidget />
+
       {selectedBuilding && (
         <BuildingInfo building={selectedBuilding} onClose={() => setSelectedBuildingId(null)} />
       )}
@@ -73,5 +78,31 @@ export default function DashboardContent() {
         </>
       )}
     </div>
+  );
+}
+
+function ComplianceWidget() {
+  const { data: stats } = useViolationStats();
+  const { data: items } = useComplianceItems();
+  const overdueCount = items?.filter((i) => i.status === "OVERDUE").length || 0;
+  const openViolations = stats?.totalOpen || 0;
+
+  return (
+    <Link href="/compliance" className="block">
+      <div className="bg-card border border-border rounded-xl p-4 hover:bg-card-hover transition-colors">
+        <div className="flex items-center gap-3">
+          <Shield className="w-5 h-5 text-accent" />
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-text-primary">
+              Open Violations: <span className="font-semibold text-red-400">{openViolations}</span>
+            </span>
+            <span className="text-border">|</span>
+            <span className="text-text-primary">
+              Overdue Compliance: <span className="font-semibold text-orange-400">{overdueCount}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }

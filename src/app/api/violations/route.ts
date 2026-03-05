@@ -1,0 +1,79 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/api-helpers";
+import type { ViolationView } from "@/types";
+
+function mapViolation(v: any): ViolationView {
+  const respondBy = v.respondByDate ? new Date(v.respondByDate) : null;
+  const now = new Date();
+  const daysUntilCure = respondBy ? Math.ceil((respondBy.getTime() - now.getTime()) / 86400000) : null;
+
+  return {
+    id: v.id,
+    buildingId: v.buildingId,
+    buildingAddress: v.building?.address || "",
+    source: v.source,
+    externalId: v.externalId,
+    class: v.class,
+    severity: v.severity,
+    description: v.description,
+    inspectionDate: v.inspectionDate?.toISOString() || null,
+    issuedDate: v.issuedDate?.toISOString() || null,
+    currentStatus: v.currentStatus,
+    penaltyAmount: Number(v.penaltyAmount),
+    respondByDate: v.respondByDate?.toISOString() || null,
+    certifiedDismissDate: v.certifiedDismissDate?.toISOString() || null,
+    correctionDate: v.correctionDate?.toISOString() || null,
+    unitNumber: v.unitNumber,
+    novDescription: v.novDescription,
+    hearingDate: v.hearingDate?.toISOString() || null,
+    hearingStatus: v.hearingStatus,
+    linkedWorkOrderId: v.linkedWorkOrderId,
+    createdAt: v.createdAt.toISOString(),
+    updatedAt: v.updatedAt.toISOString(),
+    daysUntilCure,
+  };
+}
+
+export const GET = withAuth(async (req: NextRequest, { user }) => {
+  const url = new URL(req.url);
+  const buildingId = url.searchParams.get("buildingId");
+  const source = url.searchParams.get("source");
+  const vClass = url.searchParams.get("class");
+  const status = url.searchParams.get("status");
+  const isComplaint = url.searchParams.get("isComplaint");
+  const dateFrom = url.searchParams.get("dateFrom");
+  const dateTo = url.searchParams.get("dateTo");
+
+  const where: any = {};
+
+  if (buildingId) {
+    where.buildingId = buildingId;
+  } else if (user.role !== "ADMIN" && user.assignedProperties?.length) {
+    where.buildingId = { in: user.assignedProperties };
+  }
+
+  if (source) where.source = source;
+  if (vClass) where.class = vClass;
+  if (status) where.currentStatus = { contains: status, mode: "insensitive" };
+
+  if (isComplaint === "true") {
+    where.source = { in: ["HPD_COMPLAINTS", "DOB_COMPLAINTS"] };
+  } else if (isComplaint === "false") {
+    where.source = { notIn: ["HPD_COMPLAINTS", "DOB_COMPLAINTS"] };
+  }
+
+  if (dateFrom || dateTo) {
+    where.issuedDate = {};
+    if (dateFrom) where.issuedDate.gte = new Date(dateFrom);
+    if (dateTo) where.issuedDate.lte = new Date(dateTo);
+  }
+
+  const violations = await prisma.violation.findMany({
+    where,
+    include: { building: { select: { address: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json(violations.map(mapViolation));
+}, "compliance");

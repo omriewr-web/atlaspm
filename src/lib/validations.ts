@@ -195,3 +195,36 @@ export const noteUpdateSchema = z.object({
   text: z.string().min(1, "Note text is required"),
   category: z.enum(["GENERAL", "COLLECTION", "PAYMENT", "LEGAL", "LEASE", "MAINTENANCE"]).optional(),
 });
+
+// ── Compliance & Violation Schemas ──────────────────────────────
+
+export const violationSyncSchema = z.object({
+  buildingId: z.string().optional(),
+  sources: z.array(z.enum(["HPD", "DOB", "ECB", "FDNY", "DSNY", "DOHMH", "DOB_COMPLAINTS", "HPD_COMPLAINTS", "HPD_LITIGATION"])).optional(),
+});
+
+export const complianceItemCreateSchema = z.object({
+  buildingId: z.string().min(1),
+  type: z.string().min(1),
+  category: z.enum(["LOCAL_LAW", "INSPECTION", "FILING", "CUSTOM"]),
+  name: z.string().min(1),
+  description: z.string().optional().default(""),
+  dueDate: z.string().nullable().optional(),
+  frequency: z.enum(["ANNUAL", "SEMI_ANNUAL", "QUARTERLY", "FIVE_YEAR", "FOUR_YEAR", "ONE_TIME", "ON_EVENT"]),
+  status: z.enum(["COMPLIANT", "NON_COMPLIANT", "PENDING", "OVERDUE", "SCHEDULED", "NOT_APPLICABLE"]).optional().default("PENDING"),
+  lastCompletedDate: z.string().nullable().optional(),
+  nextDueDate: z.string().nullable().optional(),
+  assignedVendorId: z.string().nullable().optional(),
+  cost: z.number().min(0).optional().default(0),
+  filedBy: z.string().nullable().optional(),
+  certificateUrl: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  linkedViolationId: z.string().nullable().optional(),
+  isCustom: z.boolean().optional().default(false),
+});
+
+export const complianceItemUpdateSchema = complianceItemCreateSchema.partial();
+
+export const complianceGenerateSchema = z.object({
+  buildingId: z.string().min(1),
+});
