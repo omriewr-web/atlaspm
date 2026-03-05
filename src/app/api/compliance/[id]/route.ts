@@ -13,7 +13,7 @@ function mapComplianceItem(item: any): ComplianceItemView {
   return {
     id: item.id,
     buildingId: item.buildingId,
-    buildingAddress: item.building?.address || "",
+    buildingAddress: item.building?.altAddress?.trim() || item.building?.address || "",
     type: item.type,
     category: item.category,
     name: item.name,
@@ -64,7 +64,7 @@ export const PATCH = withAuth(async (req: NextRequest, { params }) => {
     where: { id },
     data: updateData,
     include: {
-      building: { select: { address: true } },
+      building: { select: { address: true, altAddress: true } },
       assignedVendor: { select: { name: true } },
     },
   });

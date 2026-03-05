@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth, buildWhereClause } from "@/lib/api-helpers";
+import { withAuth } from "@/lib/api-helpers";
+import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { PortfolioMetrics } from "@/types";
 
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const buildingId = url.searchParams.get("buildingId");
   const portfolio = url.searchParams.get("portfolio");
-  const where = buildWhereClause(user, buildingId);
+
+  const tenantScope = getTenantScope(user, buildingId);
+  if (tenantScope === EMPTY_SCOPE) {
+    const empty: PortfolioMetrics = {
+      totalUnits: 0, occupied: 0, vacant: 0, totalMarketRent: 0, totalBalance: 0,
+      occupancyRate: 0, lostRent: 0, arrears30: 0, arrears60: 0, arrears90Plus: 0,
+      legalCaseCount: 0, noLease: 0, expiredLease: 0, expiringSoon: 0,
+    };
+    return NextResponse.json(empty);
+  }
+
+  const where: any = { ...(tenantScope as object) };
 
   // Apply portfolio filter
   if (portfolio) {
@@ -25,20 +37,23 @@ export const GET = withAuth(async (req, { user }) => {
     },
   });
 
+  // Unit count — derive scope from user (already checked EMPTY_SCOPE)
   const unitWhere: any = buildingId
     ? { buildingId }
-    : user.role !== "ADMIN" && user.assignedProperties?.length
-      ? { buildingId: { in: user.assignedProperties } }
-      : {};
+    : user.role === "ADMIN"
+      ? {}
+      : { buildingId: { in: user.assignedProperties } };
   if (portfolio) {
     unitWhere.building = { ...unitWhere.building, portfolio };
   }
 
   const units = await prisma.unit.count({ where: unitWhere });
 
-  const legalCaseCount = await prisma.legalCase.count({
-    where: { inLegal: true, ...(where.unit ? { tenant: { unit: where.unit } } : {}) },
-  });
+  const legalWhere: any = { inLegal: true };
+  if (Object.keys(tenantScope as object).length > 0) {
+    legalWhere.tenant = tenantScope;
+  }
+  const legalCaseCount = await prisma.legalCase.count({ where: legalWhere });
 
   const occupied = tenants.filter((t) => !t.unit.isVacant).length;
   const vacant = units - occupied;

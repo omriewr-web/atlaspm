@@ -129,10 +129,15 @@ export const useAppStore = create<AppState>((set) => ({
   resetFilters: () =>
     set({
       selectedPortfolio: null,
+      selectedBuildingId: null,
       searchTerm: "",
       arrearsFilter: "all",
       leaseFilter: "all",
       balanceMin: "",
       balanceMax: "",
+      selectedTenantIds: new Set(),
+      detailTenantId: null,
+      editTenantId: null,
+      detailBuildingId: null,
     }),
 }));

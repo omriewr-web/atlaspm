@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { workOrderCreateSchema } from "@/lib/validations";
+import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { WorkOrderView } from "@/types";
 
 function mapWorkOrder(wo: any): WorkOrderView {
@@ -18,7 +19,7 @@ function mapWorkOrder(wo: any): WorkOrderView {
     scheduledDate: wo.scheduledDate?.toISOString() ?? null,
     completedDate: wo.completedDate?.toISOString() ?? null,
     buildingId: wo.buildingId,
-    buildingAddress: wo.building?.address ?? "",
+    buildingAddress: wo.building?.altAddress?.trim() || wo.building?.address || "",
     unitId: wo.unitId,
     unitNumber: wo.unit?.unitNumber ?? null,
     tenantId: wo.tenantId,
@@ -36,7 +37,7 @@ function mapWorkOrder(wo: any): WorkOrderView {
 }
 
 const include = {
-  building: { select: { address: true } },
+  building: { select: { address: true, altAddress: true } },
   unit: { select: { unitNumber: true } },
   tenant: { select: { name: true } },
   vendor: { select: { name: true } },
@@ -52,11 +53,10 @@ export const GET = withAuth(async (req, { user }) => {
   const priority = url.searchParams.get("priority");
   const category = url.searchParams.get("category");
 
-  const where: any = {};
-  if (buildingId) where.buildingId = buildingId;
-  else if (user.role !== "ADMIN" && user.assignedProperties?.length) {
-    where.buildingId = { in: user.assignedProperties };
-  }
+  const scope = getBuildingScope(user, buildingId);
+  if (scope === EMPTY_SCOPE) return NextResponse.json([]);
+
+  const where: any = { ...scope };
   if (status) where.status = status;
   if (priority) where.priority = priority;
   if (category) where.category = category;

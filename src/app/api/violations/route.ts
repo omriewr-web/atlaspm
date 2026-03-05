@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
+import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import type { ViolationView } from "@/types";
 
 function mapViolation(v: any): ViolationView {
@@ -11,7 +12,7 @@ function mapViolation(v: any): ViolationView {
   return {
     id: v.id,
     buildingId: v.buildingId,
-    buildingAddress: v.building?.address || "",
+    buildingAddress: v.building?.altAddress?.trim() || v.building?.address || "",
     source: v.source,
     externalId: v.externalId,
     class: v.class,
@@ -45,13 +46,10 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   const dateFrom = url.searchParams.get("dateFrom");
   const dateTo = url.searchParams.get("dateTo");
 
-  const where: any = {};
+  const scope = getBuildingScope(user, buildingId);
+  if (scope === EMPTY_SCOPE) return NextResponse.json([]);
 
-  if (buildingId) {
-    where.buildingId = buildingId;
-  } else if (user.role !== "ADMIN" && user.assignedProperties?.length) {
-    where.buildingId = { in: user.assignedProperties };
-  }
+  const where: any = { ...scope };
 
   if (source) where.source = source;
   if (vClass) where.class = vClass;
@@ -71,7 +69,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
 
   const violations = await prisma.violation.findMany({
     where,
-    include: { building: { select: { address: true } } },
+    include: { building: { select: { address: true, altAddress: true } } },
     orderBy: { createdAt: "desc" },
   });
 

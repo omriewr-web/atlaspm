@@ -41,7 +41,16 @@ export const GET = withAuth(async (req: NextRequest) => {
   // Group by normalized block+lot
   const blockLotGroups = new Map<string, typeof buildings>();
   const addressGroups = new Map<string, typeof buildings>();
+  const yardiIdGroups = new Map<string, typeof buildings>();
   const matched = new Set<string>();
+
+  // Build a yardiId lookup: yardiId → building (only for buildings with block/lot, i.e. "real" records)
+  const yardiIdMap = new Map<string, (typeof buildings)[0]>();
+  for (const b of buildings) {
+    if (b.yardiId && b.block && b.lot) {
+      yardiIdMap.set(b.yardiId.toLowerCase(), b);
+    }
+  }
 
   for (const b of buildings) {
     if (b.block && b.lot) {
@@ -64,6 +73,33 @@ export const GET = withAuth(async (req: NextRequest) => {
     const key = normalizeAddress(b.address);
     if (!addressGroups.has(key)) addressGroups.set(key, []);
     addressGroups.get(key)!.push(b);
+  }
+
+  // Mark buildings already grouped by address
+  for (const [, group] of addressGroups) {
+    if (group.length >= 2) {
+      for (const b of group) matched.add(b.id);
+    }
+  }
+
+  // Match remaining by yardiId extraction: "Entity Name(yardiCode)" → look up yardiCode
+  for (const b of buildings) {
+    if (matched.has(b.id)) continue;
+    // Extract yardiId from parenthesized pattern in address or yardiId field
+    const parenMatch = (b.yardiId || b.address || "").match(/\(([^)]+)\)$/);
+    if (parenMatch) {
+      const extractedId = parenMatch[1].toLowerCase();
+      const realBuilding = yardiIdMap.get(extractedId);
+      if (realBuilding && realBuilding.id !== b.id) {
+        const key = extractedId;
+        if (!yardiIdGroups.has(key)) {
+          yardiIdGroups.set(key, [realBuilding]);
+          matched.add(realBuilding.id);
+        }
+        yardiIdGroups.get(key)!.push(b);
+        matched.add(b.id);
+      }
+    }
   }
 
   interface DupBuilding {
@@ -113,6 +149,33 @@ export const GET = withAuth(async (req: NextRequest) => {
         buildings: group.map(toBuildingInfo),
       });
     }
+  }
+
+  for (const [, group] of yardiIdGroups) {
+    if (group.length >= 2) {
+      duplicateSets.push({
+        matchedBy: "yardiId",
+        buildings: group.map(toBuildingInfo),
+      });
+    }
+  }
+
+  // Also flag "junk" buildings like "All Properties" with no relations
+  const junkBuildings = buildings.filter(
+    (b) =>
+      !matched.has(b.id) &&
+      !b.block &&
+      !b.lot &&
+      b._count.units === 0 &&
+      b._count.violations === 0 &&
+      b._count.complianceItems === 0 &&
+      (buildingTenantCount.get(b.id) || 0) === 0
+  );
+  if (junkBuildings.length > 0) {
+    duplicateSets.push({
+      matchedBy: "orphan (no data, no block/lot)",
+      buildings: junkBuildings.map(toBuildingInfo),
+    });
   }
 
   return NextResponse.json({ duplicateSets });
@@ -230,7 +293,7 @@ export const POST = withAuth(async (req: NextRequest) => {
     }
 
     return { merged: mergeIds.length, kept: keepId, movedUnits, movedViolations, movedCompliance };
-  });
+  }, { timeout: 30000 });
 
   return NextResponse.json(result);
 }, "upload");

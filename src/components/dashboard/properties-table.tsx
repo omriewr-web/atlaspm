@@ -20,7 +20,6 @@ export default function PropertiesTable({ buildings }: Props) {
             <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Units</th>
             <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Occ.</th>
             <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Vacant</th>
-            <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Market Rent</th>
             <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Balance</th>
             <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Occupancy</th>
           </tr>
@@ -36,7 +35,6 @@ export default function PropertiesTable({ buildings }: Props) {
               <td className="px-3 py-2 text-right text-text-muted tabular-nums">{b.totalUnits}</td>
               <td className="px-3 py-2 text-right text-green-400 tabular-nums">{b.occupied}</td>
               <td className="px-3 py-2 text-right text-amber-400 tabular-nums">{b.vacant}</td>
-              <td className="px-3 py-2 text-right text-text-muted font-mono tabular-nums">{fmt$(b.totalMarketRent)}</td>
               <td className="px-3 py-2 text-right text-red-400 font-mono tabular-nums">{fmt$(b.totalBalance)}</td>
               <td className="px-3 py-2 text-right text-text-muted tabular-nums">
                 {b.totalUnits > 0 ? pct((b.occupied / b.totalUnits) * 100) : "—"}

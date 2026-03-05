@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth, buildWhereClause, parseBody } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { tenantCreateSchema } from "@/lib/validations";
 import { TenantView } from "@/types";
+import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { getArrearsCategory, getArrearsDays, getLeaseStatus, calcCollectionScore } from "@/lib/scoring";
 
 export const GET = withAuth(async (req, { user }) => {
@@ -14,7 +15,10 @@ export const GET = withAuth(async (req, { user }) => {
   const sortField = url.searchParams.get("sort") || "balance";
   const sortDir = url.searchParams.get("dir") === "asc" ? "asc" : "desc";
 
-  const where: any = buildWhereClause(user, buildingId);
+  const scope = getTenantScope(user, buildingId);
+  if (scope === EMPTY_SCOPE) return NextResponse.json([]);
+
+  const where: any = { ...scope };
 
   if (search) {
     where.OR = [
@@ -38,7 +42,7 @@ export const GET = withAuth(async (req, { user }) => {
     include: {
       unit: {
         include: {
-          building: { select: { id: true, address: true, region: true, entity: true, portfolio: true } },
+          building: { select: { id: true, address: true, altAddress: true, region: true, entity: true, portfolio: true } },
         },
       },
       legalCase: { select: { inLegal: true, stage: true } },
@@ -61,7 +65,7 @@ export const GET = withAuth(async (req, { user }) => {
     unitNumber: t.unit.unitNumber,
     unitType: t.unit.unitType,
     buildingId: t.unit.building.id,
-    buildingAddress: t.unit.building.address,
+    buildingAddress: (t.unit.building.altAddress?.trim()) || t.unit.building.address,
     buildingRegion: t.unit.building.region,
     entity: t.unit.building.entity,
     portfolio: t.unit.building.portfolio,
@@ -79,12 +83,12 @@ export const GET = withAuth(async (req, { user }) => {
     balance: Number(t.balance),
     arrearsCategory: t.arrearsCategory as any,
     arrearsDays: t.arrearsDays,
-    monthsOwed: Number(t.monthsOwed),
+    monthsOwed: t.balance && t.marketRent ? Math.round((Number(t.balance) / Number(t.marketRent)) * 10) / 10 : 0,
     leaseStatus: t.leaseStatus as any,
     collectionScore: t.collectionScore,
-    legalFlag: t.legalCase?.inLegal ?? false,
-    legalStage: t.legalCase?.stage?.toLowerCase().replace(/_/g, "-") as any ?? null,
-    legalRecommended: t.collectionScore >= 60 && !t.legalCase?.inLegal,
+    legalFlag: !!t.legalCase?.inLegal,
+    legalStage: (t.legalCase?.stage as any) || null,
+    legalRecommended: t.collectionScore >= 70 && !t.legalCase?.inLegal,
     noteCount: t._count.notes,
     paymentCount: t._count.payments,
     taskCount: t._count.tasks,

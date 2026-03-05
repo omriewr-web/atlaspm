@@ -3,17 +3,17 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { buildingCreateSchema } from "@/lib/validations";
+import { getBuildingIdScope, EMPTY_SCOPE } from "@/lib/data-scope";
 
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const portfolio = url.searchParams.get("portfolio");
-  const where: any = {};
-  if (user.role !== "ADMIN" && user.assignedProperties?.length) {
-    where.id = { in: user.assignedProperties };
-  }
-  if (portfolio) {
-    where.portfolio = portfolio;
-  }
+
+  const scope = getBuildingIdScope(user);
+  if (scope === EMPTY_SCOPE) return NextResponse.json([]);
+
+  const where: any = { ...scope };
+  if (portfolio) where.portfolio = portfolio;
 
   const buildings = await prisma.building.findMany({
     where,
@@ -34,10 +34,13 @@ export const GET = withAuth(async (req, { user }) => {
     const totalMarketRent = b.units.reduce((sum, u) => sum + Number(u.tenant?.marketRent ?? 0), 0);
     const totalBalance = b.units.reduce((sum, u) => sum + Number(u.tenant?.balance ?? 0), 0);
 
+    // Prefer altAddress (actual street address) over entity-style address field
+    const displayAddress = (b.altAddress && b.altAddress.trim()) ? b.altAddress : b.address;
+
     return {
       id: b.id,
       yardiId: b.yardiId,
-      address: b.address,
+      address: displayAddress,
       altAddress: b.altAddress,
       entity: b.entity,
       portfolio: b.portfolio,

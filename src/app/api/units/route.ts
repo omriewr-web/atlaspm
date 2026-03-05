@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
+import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const buildingId = url.searchParams.get("buildingId");
 
-  const where: any = {};
-  if (buildingId) {
-    where.buildingId = buildingId;
-  } else if (user.role !== "ADMIN" && user.assignedProperties?.length) {
-    where.buildingId = { in: user.assignedProperties };
-  }
+  const scope = getBuildingScope(user, buildingId);
+  if (scope === EMPTY_SCOPE) return NextResponse.json([]);
+
+  const where: any = { ...scope };
 
   const units = await prisma.unit.findMany({
     where,
     include: {
-      building: { select: { id: true, address: true } },
+      building: { select: { id: true, address: true, altAddress: true } },
       tenant: { select: { id: true, name: true, marketRent: true, balance: true, leaseStatus: true } },
     },
     orderBy: [{ building: { address: "asc" } }, { unitNumber: "asc" }],
@@ -29,7 +28,7 @@ export const GET = withAuth(async (req, { user }) => {
       unitType: u.unitType,
       isVacant: u.isVacant,
       buildingId: u.building.id,
-      buildingAddress: u.building.address,
+      buildingAddress: u.building.altAddress?.trim() || u.building.address,
       tenantId: u.tenant?.id ?? null,
       tenantName: u.tenant?.name ?? null,
       marketRent: u.tenant ? Number(u.tenant.marketRent) : null,

@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { maintenanceScheduleSchema } from "@/lib/validations";
+import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 
 export const GET = withAuth(async (req, { user }) => {
-  const where: any = {};
-  if (user.role !== "ADMIN" && user.assignedProperties?.length) {
-    where.buildingId = { in: user.assignedProperties };
-  }
+  const scope = getBuildingScope(user);
+  if (scope === EMPTY_SCOPE) return NextResponse.json([]);
+
+  const where: any = { ...scope };
 
   const schedules = await prisma.maintenanceSchedule.findMany({
     where,

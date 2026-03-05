@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { complianceItemCreateSchema } from "@/lib/validations";
+import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import type { ComplianceItemView } from "@/types";
 
 function mapComplianceItem(item: any): ComplianceItemView {
@@ -12,7 +13,7 @@ function mapComplianceItem(item: any): ComplianceItemView {
   return {
     id: item.id,
     buildingId: item.buildingId,
-    buildingAddress: item.building?.address || "",
+    buildingAddress: item.building?.altAddress?.trim() || item.building?.address || "",
     type: item.type,
     category: item.category,
     name: item.name,
@@ -43,13 +44,10 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   const status = url.searchParams.get("status");
   const frequency = url.searchParams.get("frequency");
 
-  const where: any = {};
+  const scope = getBuildingScope(user, buildingId);
+  if (scope === EMPTY_SCOPE) return NextResponse.json([]);
 
-  if (buildingId) {
-    where.buildingId = buildingId;
-  } else if (user.role !== "ADMIN" && user.assignedProperties?.length) {
-    where.buildingId = { in: user.assignedProperties };
-  }
+  const where: any = { ...scope };
 
   if (category) where.category = category;
   if (status) where.status = status;
@@ -58,7 +56,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   const items = await prisma.complianceItem.findMany({
     where,
     include: {
-      building: { select: { address: true } },
+      building: { select: { address: true, altAddress: true } },
       assignedVendor: { select: { name: true } },
     },
     orderBy: { nextDueDate: "asc" },
@@ -78,7 +76,7 @@ export const POST = withAuth(async (req: NextRequest) => {
       nextDueDate: data.nextDueDate ? new Date(data.nextDueDate) : undefined,
     },
     include: {
-      building: { select: { address: true } },
+      building: { select: { address: true, altAddress: true } },
       assignedVendor: { select: { name: true } },
     },
   });

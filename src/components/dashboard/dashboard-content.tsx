@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, Users, AlertTriangle, DollarSign, Scale, FileText, Shield } from "lucide-react";
@@ -19,15 +20,16 @@ import { useAppStore } from "@/stores/app-store";
 
 export default function DashboardContent() {
   const router = useRouter();
+  const { selectedBuildingId, setSelectedBuildingId, selectedPortfolio, setSelectedPortfolio, setArrearsFilter, setLeaseFilter } = useAppStore();
   const { data: metrics, isLoading } = useMetrics();
   const { data: buildings } = useBuildings();
   const { data: allBuildings } = useAllBuildings();
-  const { selectedBuildingId, setSelectedBuildingId, selectedPortfolio, setSelectedPortfolio, setArrearsFilter, setLeaseFilter } = useAppStore();
   const selectedBuilding = buildings?.find((b) => b.id === selectedBuildingId);
 
-  const portfolios = [
-    ...new Set((allBuildings || []).map((b) => b.portfolio).filter(Boolean)),
-  ].sort() as string[];
+  // Derive portfolio list from all buildings (unfiltered) so the dropdown stays populated
+  const portfolios = useMemo(() => {
+    return [...new Set((allBuildings || []).map((b) => b.portfolio).filter(Boolean))].sort() as string[];
+  }, [allBuildings]);
 
   if (isLoading || !metrics) return <PageSkeleton />;
 

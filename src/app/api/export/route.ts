@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth, buildWhereClause } from "@/lib/api-helpers";
+import { withAuth } from "@/lib/api-helpers";
 import { exportToExcel } from "@/lib/excel-export";
+import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { TenantView } from "@/types";
 
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const buildingId = url.searchParams.get("buildingId");
-  const where = buildWhereClause(user, buildingId);
+  const scope = getTenantScope(user, buildingId);
+  if (scope === EMPTY_SCOPE) {
+    return new NextResponse("No data", { status: 204 });
+  }
+  const where = { ...scope };
 
   const tenants = await prisma.tenant.findMany({
     where,
     include: {
-      unit: { include: { building: { select: { id: true, address: true, region: true, entity: true, portfolio: true } } } },
+      unit: { include: { building: { select: { id: true, address: true, altAddress: true, region: true, entity: true, portfolio: true } } } },
       legalCase: { select: { inLegal: true, stage: true } },
       _count: { select: { notes: true, payments: true, tasks: true } },
     },
@@ -29,7 +34,7 @@ export const GET = withAuth(async (req, { user }) => {
     unitNumber: t.unit.unitNumber,
     unitType: t.unit.unitType,
     buildingId: t.unit.building.id,
-    buildingAddress: t.unit.building.address,
+    buildingAddress: t.unit.building.altAddress?.trim() || t.unit.building.address,
     buildingRegion: t.unit.building.region,
     entity: t.unit.building.entity,
     portfolio: t.unit.building.portfolio,

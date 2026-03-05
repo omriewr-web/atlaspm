@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           role: user.role,
           assignedProperties: user.assignedProperties.map((p) => p.buildingId),
-        } as any;
+        };
       },
     }),
   ],
@@ -39,8 +39,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
-        token.assignedProperties = (user as any).assignedProperties || [];
+        token.role = user.role;
+        token.assignedProperties = user.assignedProperties || [];
       }
       return token;
     },
