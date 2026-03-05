@@ -35,6 +35,26 @@ export function useCreateVendor() {
   });
 }
 
+export function useUpdateVendor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await fetch(`/api/vendors/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update vendor");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vendors"] });
+      toast.success("Vendor updated");
+    },
+    onError: () => toast.error("Failed to update vendor"),
+  });
+}
+
 export function useDeleteVendor() {
   const qc = useQueryClient();
   return useMutation({

@@ -1,37 +1,56 @@
 "use client";
 
-import { Database, FileDown } from "lucide-react";
-import UploadZone from "@/components/data/upload-zone";
-import Button from "@/components/ui/button";
-import { useExportExcel } from "@/hooks/use-export";
+import { useState } from "react";
+import { Building2, Home, Users, Wrench, Upload, FileDown } from "lucide-react";
+import BuildingsTab from "@/components/data/buildings-tab";
+import UnitsTab from "@/components/data/units-tab";
+import TenantsTab from "@/components/data/tenants-tab";
+import VendorsTab from "@/components/data/vendors-tab";
+import ImportTab from "@/components/data/import-tab";
+import ExportTab from "@/components/data/export-tab";
+
+const tabs = [
+  { key: "buildings", label: "Buildings", icon: Building2 },
+  { key: "units", label: "Units", icon: Home },
+  { key: "tenants", label: "Tenants", icon: Users },
+  { key: "vendors", label: "Vendors", icon: Wrench },
+  { key: "import", label: "Import", icon: Upload },
+  { key: "export", label: "Export", icon: FileDown },
+] as const;
+
+type TabKey = (typeof tabs)[number]["key"];
 
 export default function DataContent() {
-  const exportExcel = useExportExcel();
+  const [tab, setTab] = useState<TabKey>("buildings");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h1 className="text-xl font-bold text-text-primary">Data Management</h1>
 
-      <div className="bg-card border border-border rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Database className="w-4 h-4 text-accent" />
-          <h3 className="text-sm font-medium text-text-primary">Import Rent Roll</h3>
-        </div>
-        <p className="text-xs text-text-dim mb-4">
-          Upload an Excel rent roll to create or update tenant records. Existing tenants will be
-          updated; new units will be created automatically.
-        </p>
-        <UploadZone />
+      <div className="flex gap-1 border-b border-border">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              tab === t.key
+                ? "text-accent border-b-2 border-accent"
+                : "text-text-dim hover:text-text-muted"
+            }`}
+          >
+            <t.icon className="w-4 h-4" />
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="text-sm font-medium text-text-primary mb-3">Export Data</h3>
-        <p className="text-xs text-text-dim mb-4">
-          Download all current tenant data as an Excel spreadsheet.
-        </p>
-        <Button variant="outline" onClick={exportExcel}>
-          <FileDown className="w-4 h-4" /> Export to Excel
-        </Button>
+      <div>
+        {tab === "buildings" && <BuildingsTab />}
+        {tab === "units" && <UnitsTab />}
+        {tab === "tenants" && <TenantsTab />}
+        {tab === "vendors" && <VendorsTab />}
+        {tab === "import" && <ImportTab />}
+        {tab === "export" && <ExportTab />}
       </div>
     </div>
   );
