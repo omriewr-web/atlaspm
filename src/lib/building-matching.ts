@@ -1,0 +1,121 @@
+import { prisma } from "@/lib/prisma";
+
+const ABBREVIATIONS: Record<string, string> = {
+  st: "street",
+  ave: "avenue",
+  blvd: "boulevard",
+  dr: "drive",
+  rd: "road",
+  pl: "place",
+  ct: "court",
+  ln: "lane",
+};
+
+const ENTITY_NOISE = /\b(llc|inc|corp|lp|associates|group|holdings|management)\b/g;
+
+export function normalizeAddress(addr: string): string {
+  let result = addr.toLowerCase().trim();
+  // Expand abbreviations (word-boundary match)
+  for (const [abbr, full] of Object.entries(ABBREVIATIONS)) {
+    result = result.replace(new RegExp(`\\b${abbr}\\.?\\b`, "g"), full);
+  }
+  // Collapse whitespace, strip non-alphanumeric (except spaces)
+  result = result.replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  return result;
+}
+
+export function normalizeBlockLot(val: string): string {
+  return val.replace(/^0+/, "").trim();
+}
+
+export function normalizeEntity(entity: string): string {
+  return entity
+    .toLowerCase()
+    .replace(ENTITY_NOISE, "")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+interface BuildingCandidate {
+  address: string;
+  block?: string | null;
+  lot?: string | null;
+  entity?: string | null;
+}
+
+interface ExistingBuilding {
+  id: string;
+  address: string;
+  block: string | null;
+  lot: string | null;
+  entity: string | null;
+  yardiId: string;
+}
+
+export function findMatchingBuilding(
+  candidate: BuildingCandidate,
+  existingBuildings: ExistingBuilding[]
+): { id: string; matchedBy: string } | null {
+  // 1. Block+lot match (both non-empty, normalized)
+  if (candidate.block && candidate.lot) {
+    const normBlock = normalizeBlockLot(candidate.block);
+    const normLot = normalizeBlockLot(candidate.lot);
+    const match = existingBuildings.find(
+      (b) =>
+        b.block &&
+        b.lot &&
+        normalizeBlockLot(b.block) === normBlock &&
+        normalizeBlockLot(b.lot) === normLot
+    );
+    if (match) return { id: match.id, matchedBy: "block+lot" };
+  }
+
+  // 2. Normalized address equality
+  const normAddr = normalizeAddress(candidate.address);
+  const addrMatch = existingBuildings.find(
+    (b) => normalizeAddress(b.address) === normAddr
+  );
+  if (addrMatch) return { id: addrMatch.id, matchedBy: "address" };
+
+  // 3. Normalized entity contains-match (both non-empty)
+  if (candidate.entity) {
+    const normEntity = normalizeEntity(candidate.entity);
+    if (normEntity) {
+      const entityMatch = existingBuildings.find(
+        (b) =>
+          b.entity &&
+          (() => {
+            const normExisting = normalizeEntity(b.entity!);
+            return (
+              normExisting.includes(normEntity) ||
+              normEntity.includes(normExisting)
+            );
+          })()
+      );
+      if (entityMatch) return { id: entityMatch.id, matchedBy: "entity" };
+    }
+  }
+
+  return null;
+}
+
+export async function fetchBuildingsForMatching() {
+  return prisma.building.findMany({
+    select: {
+      id: true,
+      address: true,
+      block: true,
+      lot: true,
+      entity: true,
+      yardiId: true,
+    },
+  });
+}
+
+export function generateYardiId(address: string): string {
+  const sanitized = address
+    .replace(/[^a-zA-Z0-9]/g, "-")
+    .substring(0, 30);
+  return `IMPORT-${sanitized}-${Date.now()}`;
+}

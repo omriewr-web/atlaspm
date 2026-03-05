@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/api-helpers";
 import { parseBuildingDataExcel, buildingRowToPrismaData } from "@/lib/building-import";
 import type { ParsedBuildingRow } from "@/lib/building-import";
 import { calculateNextDueDate } from "@/lib/compliance-templates";
+import { findMatchingBuilding, fetchBuildingsForMatching, generateYardiId } from "@/lib/building-matching";
 
 // POST /api/import/buildings
 // ?mode=preview  → parse file, return preview of what will be created/updated
@@ -30,9 +31,7 @@ export const POST = withAuth(async (req: NextRequest) => {
   }
 
   // Match each parsed row against existing buildings
-  const existingBuildings = await prisma.building.findMany({
-    select: { id: true, address: true, block: true, lot: true, yardiId: true },
-  });
+  const existingBuildings = await fetchBuildingsForMatching();
 
   interface PreviewRow {
     rowIndex: number;
@@ -94,7 +93,7 @@ export const POST = withAuth(async (req: NextRequest) => {
         updated++;
       } else {
         // Create new building — need a yardiId
-        const yardiId = row.yardiId || `IMPORT-${row.address.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 30)}-${Date.now()}`;
+        const yardiId = row.yardiId || generateYardiId(row.address);
         const newBuilding = await prisma.building.create({
           data: {
             ...prismaData,
@@ -134,40 +133,6 @@ export const POST = withAuth(async (req: NextRequest) => {
     errors: importErrors,
   });
 }, "upload");
-
-function findMatchingBuilding(
-  row: ParsedBuildingRow,
-  existing: { id: string; address: string; block: string | null; lot: string | null; yardiId: string }[]
-): { id: string; matchedBy: string } | null {
-  // 1. Match by Yardi ID
-  if (row.yardiId) {
-    const match = existing.find((b) => b.yardiId === row.yardiId);
-    if (match) return { id: match.id, matchedBy: "yardiId" };
-  }
-
-  // 2. Match by block+lot (both present and non-empty)
-  if (row.block && row.lot) {
-    const match = existing.find(
-      (b) => b.block && b.lot && normalizeBlockLot(b.block) === normalizeBlockLot(row.block!) && normalizeBlockLot(b.lot) === normalizeBlockLot(row.lot!)
-    );
-    if (match) return { id: match.id, matchedBy: "block+lot" };
-  }
-
-  // 3. Match by address (normalized)
-  const normalizedAddr = normalizeAddress(row.address);
-  const match = existing.find((b) => normalizeAddress(b.address) === normalizedAddr);
-  if (match) return { id: match.id, matchedBy: "address" };
-
-  return null;
-}
-
-function normalizeBlockLot(val: string): string {
-  return val.replace(/^0+/, "").trim();
-}
-
-function normalizeAddress(addr: string): string {
-  return addr.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
-}
 
 /** Generate compliance items from building import data dates */
 async function generateComplianceFromImport(buildingId: string, row: ParsedBuildingRow): Promise<number> {

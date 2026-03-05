@@ -5,13 +5,14 @@ import { PortfolioMetrics } from "@/types";
 import { useAppStore } from "@/stores/app-store";
 
 export function useMetrics() {
-  const { selectedBuildingId } = useAppStore();
+  const { selectedBuildingId, selectedPortfolio } = useAppStore();
 
   return useQuery<PortfolioMetrics>({
-    queryKey: ["metrics", selectedBuildingId],
+    queryKey: ["metrics", selectedBuildingId, selectedPortfolio],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedBuildingId) params.set("buildingId", selectedBuildingId);
+      if (selectedPortfolio) params.set("portfolio", selectedPortfolio);
       const res = await fetch(`/api/metrics?${params}`);
       if (!res.ok) throw new Error("Failed to fetch metrics");
       return res.json();

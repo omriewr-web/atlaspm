@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { parseRentRollExcel } from "@/lib/excel-import";
 import { getArrearsCategory, getArrearsDays, getLeaseStatus, calcCollectionScore } from "@/lib/scoring";
+import { findMatchingBuilding, fetchBuildingsForMatching, generateYardiId, normalizeAddress } from "@/lib/building-matching";
 
 export const POST = withAuth(async (req, { user }) => {
   const formData = await req.formData();
@@ -20,20 +21,30 @@ export const POST = withAuth(async (req, { user }) => {
   let imported = 0;
   let skipped = 0;
   const buildingCache = new Map<string, string>();
+  const existing = await fetchBuildingsForMatching();
 
   for (const t of tenants) {
     try {
       const propKey = t.property || propertyName || "Unknown";
-      let buildingId = buildingCache.get(propKey);
+      const cacheKey = normalizeAddress(propKey);
+      let buildingId = buildingCache.get(cacheKey);
 
       if (!buildingId) {
-        const building = await prisma.building.upsert({
-          where: { yardiId: propKey },
-          create: { yardiId: propKey, address: propKey },
-          update: {},
-        });
-        buildingId = building.id;
-        buildingCache.set(propKey, buildingId);
+        const match = findMatchingBuilding(
+          { address: propKey, block: null, lot: null, entity: null },
+          existing
+        );
+        if (match) {
+          buildingId = match.id;
+        } else {
+          const yardiId = generateYardiId(propKey);
+          const building = await prisma.building.create({
+            data: { yardiId, address: propKey },
+          });
+          buildingId = building.id;
+          existing.push({ id: buildingId, address: propKey, block: null, lot: null, entity: null, yardiId });
+        }
+        buildingCache.set(cacheKey, buildingId);
       }
 
       const unit = await prisma.unit.upsert({

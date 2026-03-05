@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Eye, Building2, Users, Phone, Mail, Zap, Flame, ArrowUpDown, Shield, HardHat, Gauge, FileCheck } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Plus, Pencil, Trash2, Eye, Building2, Users, Phone, Mail, Zap, Flame, ArrowUpDown, Shield, HardHat, Gauge, FileCheck, Merge } from "lucide-react";
 import { useBuildings, useDeleteBuilding, useBuilding } from "@/hooks/use-buildings";
 import { useAppStore } from "@/stores/app-store";
+import { useQueryClient } from "@tanstack/react-query";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import { formatDate, fmt$ } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function BuildingsTab() {
   const { data: buildings, isLoading } = useBuildings();
@@ -16,6 +18,7 @@ export default function BuildingsTab() {
   const { openBuildingForm } = useAppStore();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [dedupOpen, setDedupOpen] = useState(false);
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -23,9 +26,14 @@ export default function BuildingsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-muted">{buildings?.length || 0} buildings</p>
-        <Button size="sm" onClick={() => openBuildingForm()}>
-          <Plus className="w-3.5 h-3.5" /> Add Building
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setDedupOpen(true)}>
+            <Merge className="w-3.5 h-3.5" /> Deduplicate
+          </Button>
+          <Button size="sm" onClick={() => openBuildingForm()}>
+            <Plus className="w-3.5 h-3.5" /> Add Building
+          </Button>
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -93,7 +101,159 @@ export default function BuildingsTab() {
         message="This will permanently delete this building and all its units, tenants, and related data."
         loading={deleteBuilding.isPending}
       />
+
+      <DeduplicateModal open={dedupOpen} onClose={() => setDedupOpen(false)} />
     </div>
+  );
+}
+
+interface DupBuilding {
+  id: string;
+  address: string;
+  block: string | null;
+  lot: string | null;
+  entity: string | null;
+  unitCount: number;
+  tenantCount: number;
+  violationCount: number;
+  complianceCount: number;
+}
+
+interface DuplicateSet {
+  matchedBy: string;
+  buildings: DupBuilding[];
+}
+
+function DeduplicateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [scanning, setScanning] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [sets, setSets] = useState<DuplicateSet[] | null>(null);
+  const qc = useQueryClient();
+
+  const scan = useCallback(async () => {
+    setScanning(true);
+    setSets(null);
+    try {
+      const res = await fetch("/api/buildings/deduplicate");
+      if (!res.ok) throw new Error("Scan failed");
+      const data = await res.json();
+      setSets(data.duplicateSets);
+    } catch {
+      toast.error("Failed to scan for duplicates");
+    } finally {
+      setScanning(false);
+    }
+  }, []);
+
+  const mergeSet = async (set: DuplicateSet) => {
+    // Pick building with most relations as keeper
+    const sorted = [...set.buildings].sort(
+      (a, b) =>
+        b.unitCount + b.tenantCount + b.violationCount + b.complianceCount -
+        (a.unitCount + a.tenantCount + a.violationCount + a.complianceCount)
+    );
+    const keepId = sorted[0].id;
+    const mergeIds = sorted.slice(1).map((b) => b.id);
+
+    const res = await fetch("/api/buildings/deduplicate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keepId, mergeIds }),
+    });
+    if (!res.ok) throw new Error("Merge failed");
+    return res.json();
+  };
+
+  const mergeAll = async () => {
+    if (!sets?.length) return;
+    setMerging(true);
+    try {
+      for (const set of sets) {
+        await mergeSet(set);
+      }
+      toast.success("All duplicates merged");
+      qc.invalidateQueries({ queryKey: ["buildings"] });
+      setSets([]);
+    } catch {
+      toast.error("Merge failed");
+    } finally {
+      setMerging(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Deduplicate Buildings" wide>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-text-muted">
+            Scan for duplicate buildings that can be merged.
+          </p>
+          <Button size="sm" onClick={scan} disabled={scanning}>
+            {scanning ? "Scanning..." : "Scan for Duplicates"}
+          </Button>
+        </div>
+
+        {sets !== null && sets.length === 0 && (
+          <div className="text-center py-8 text-text-dim text-sm">
+            No duplicates found.
+          </div>
+        )}
+
+        {sets !== null && sets.length > 0 && (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-text-primary font-medium">
+                {sets.length} duplicate {sets.length === 1 ? "set" : "sets"} found
+              </p>
+              <Button size="sm" onClick={mergeAll} disabled={merging}>
+                {merging ? "Merging..." : "Merge All"}
+              </Button>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+              {sets.map((set, i) => {
+                const sorted = [...set.buildings].sort(
+                  (a, b) =>
+                    b.unitCount + b.tenantCount + b.violationCount + b.complianceCount -
+                    (a.unitCount + a.tenantCount + a.violationCount + a.complianceCount)
+                );
+                return (
+                  <div key={i} className="bg-bg border border-border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                        Matched by {set.matchedBy}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {sorted.map((b, j) => (
+                        <div
+                          key={b.id}
+                          className={`flex items-center justify-between text-sm px-2 py-1 rounded ${
+                            j === 0 ? "bg-green-500/10 border border-green-500/20" : "bg-card"
+                          }`}
+                        >
+                          <div>
+                            <span className="text-text-primary">{b.address}</span>
+                            {b.entity && <span className="text-text-dim text-xs ml-2">({b.entity})</span>}
+                            {j === 0 && <span className="text-green-400 text-xs ml-2">Keep</span>}
+                            {j > 0 && <span className="text-red-400 text-xs ml-2">Merge</span>}
+                          </div>
+                          <div className="flex gap-3 text-xs text-text-dim">
+                            <span>{b.unitCount} units</span>
+                            <span>{b.tenantCount} tenants</span>
+                            <span>{b.violationCount} violations</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
   );
 }
 

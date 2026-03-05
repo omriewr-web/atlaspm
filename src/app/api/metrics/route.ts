@@ -6,7 +6,13 @@ import { PortfolioMetrics } from "@/types";
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const buildingId = url.searchParams.get("buildingId");
+  const portfolio = url.searchParams.get("portfolio");
   const where = buildWhereClause(user, buildingId);
+
+  // Apply portfolio filter
+  if (portfolio) {
+    where.unit = { ...where.unit, building: { ...where.unit?.building, portfolio } };
+  }
 
   const tenants = await prisma.tenant.findMany({
     where,
@@ -19,13 +25,16 @@ export const GET = withAuth(async (req, { user }) => {
     },
   });
 
-  const units = await prisma.unit.count({
-    where: buildingId
-      ? { buildingId }
-      : user.role !== "ADMIN" && user.assignedProperties?.length
-        ? { buildingId: { in: user.assignedProperties } }
-        : {},
-  });
+  const unitWhere: any = buildingId
+    ? { buildingId }
+    : user.role !== "ADMIN" && user.assignedProperties?.length
+      ? { buildingId: { in: user.assignedProperties } }
+      : {};
+  if (portfolio) {
+    unitWhere.building = { ...unitWhere.building, portfolio };
+  }
+
+  const units = await prisma.unit.count({ where: unitWhere });
 
   const legalCaseCount = await prisma.legalCase.count({
     where: { inLegal: true, ...(where.unit ? { tenant: { unit: where.unit } } : {}) },

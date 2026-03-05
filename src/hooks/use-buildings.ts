@@ -2,11 +2,29 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BuildingView } from "@/types";
+import { useAppStore } from "@/stores/app-store";
 import toast from "react-hot-toast";
 
 export function useBuildings() {
+  const selectedPortfolio = useAppStore((s) => s.selectedPortfolio);
+  const params = new URLSearchParams();
+  if (selectedPortfolio) params.set("portfolio", selectedPortfolio);
+  const qs = params.toString();
+
   return useQuery<BuildingView[]>({
-    queryKey: ["buildings"],
+    queryKey: ["buildings", selectedPortfolio],
+    queryFn: async () => {
+      const res = await fetch(`/api/buildings${qs ? `?${qs}` : ""}`);
+      if (!res.ok) throw new Error("Failed to fetch buildings");
+      return res.json();
+    },
+  });
+}
+
+/** Fetch all buildings (ignores portfolio filter) — used for portfolio list */
+export function useAllBuildings() {
+  return useQuery<BuildingView[]>({
+    queryKey: ["buildings", null],
     queryFn: async () => {
       const res = await fetch("/api/buildings");
       if (!res.ok) throw new Error("Failed to fetch buildings");

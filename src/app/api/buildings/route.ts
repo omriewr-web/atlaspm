@@ -5,9 +5,14 @@ import { withAuth, parseBody } from "@/lib/api-helpers";
 import { buildingCreateSchema } from "@/lib/validations";
 
 export const GET = withAuth(async (req, { user }) => {
+  const url = new URL(req.url);
+  const portfolio = url.searchParams.get("portfolio");
   const where: any = {};
   if (user.role !== "ADMIN" && user.assignedProperties?.length) {
     where.id = { in: user.assignedProperties };
+  }
+  if (portfolio) {
+    where.portfolio = portfolio;
   }
 
   const buildings = await prisma.building.findMany({

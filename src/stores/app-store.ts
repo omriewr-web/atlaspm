@@ -1,6 +1,9 @@
 import { create } from "zustand";
 
 interface AppState {
+  selectedPortfolio: string | null;
+  setSelectedPortfolio: (p: string | null) => void;
+
   selectedBuildingId: string | null;
   setSelectedBuildingId: (id: string | null) => void;
 
@@ -53,6 +56,9 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  selectedPortfolio: null,
+  setSelectedPortfolio: (p) => set({ selectedPortfolio: p, selectedBuildingId: null }),
+
   selectedBuildingId: null,
   setSelectedBuildingId: (id) => set({ selectedBuildingId: id }),
 
@@ -108,6 +114,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   resetFilters: () =>
     set({
+      selectedPortfolio: null,
       searchTerm: "",
       arrearsFilter: "all",
       leaseFilter: "all",

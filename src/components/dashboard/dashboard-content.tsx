@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Building2, Users, AlertTriangle, DollarSign, Scale, FileText, Shield } from "lucide-react";
 import { useMetrics } from "@/hooks/use-metrics";
-import { useBuildings } from "@/hooks/use-buildings";
+import { useBuildings, useAllBuildings } from "@/hooks/use-buildings";
 import { useViolationStats } from "@/hooks/use-violations";
 import { useComplianceItems } from "@/hooks/use-compliance";
 import StatCard from "@/components/ui/stat-card";
@@ -19,14 +19,35 @@ import { useAppStore } from "@/stores/app-store";
 export default function DashboardContent() {
   const { data: metrics, isLoading } = useMetrics();
   const { data: buildings } = useBuildings();
-  const { selectedBuildingId, setSelectedBuildingId } = useAppStore();
+  const { data: allBuildings } = useAllBuildings();
+  const { selectedBuildingId, setSelectedBuildingId, selectedPortfolio, setSelectedPortfolio } = useAppStore();
   const selectedBuilding = buildings?.find((b) => b.id === selectedBuildingId);
+
+  const portfolios = [
+    ...new Set((allBuildings || []).map((b) => b.portfolio).filter(Boolean)),
+  ].sort() as string[];
 
   if (isLoading || !metrics) return <LoadingSpinner />;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-text-primary">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-text-primary">Dashboard</h1>
+        {portfolios.length > 0 && (
+          <select
+            value={selectedPortfolio || ""}
+            onChange={(e) => setSelectedPortfolio(e.target.value || null)}
+            className="bg-bg border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+          >
+            <option value="">All Portfolios</option>
+            {portfolios.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard label="Total Units" value={metrics.totalUnits} icon={Building2} subtext={`${pct(metrics.occupancyRate)} occupied`} />
