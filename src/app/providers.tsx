@@ -23,9 +23,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           position="top-right"
           toastOptions={{
             style: {
-              background: "#1A2029",
+              background: "#141A24",
               color: "#E8ECF1",
               border: "1px solid #2A3441",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
             },
           }}
         />

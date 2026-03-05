@@ -14,7 +14,7 @@ export default function PropertiesTable({ buildings }: Props) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead>
+        <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-border">
             <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Property</th>
             <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Units</th>
@@ -26,19 +26,19 @@ export default function PropertiesTable({ buildings }: Props) {
           </tr>
         </thead>
         <tbody>
-          {buildings.map((b) => (
+          {buildings.map((b, index) => (
             <tr
               key={b.id}
-              className="border-b border-border/50 hover:bg-card-hover cursor-pointer transition-colors"
+              className={`border-b border-border/50 cursor-pointer transition-all border-l-2 border-l-transparent hover:bg-card-hover hover:border-l-accent ${index % 2 === 1 ? "bg-[#141A2240]" : ""}`}
               onClick={() => setSelectedBuildingId(b.id)}
             >
               <td className="px-3 py-2 text-text-primary">{b.address}</td>
-              <td className="px-3 py-2 text-right text-text-muted">{b.totalUnits}</td>
-              <td className="px-3 py-2 text-right text-green-400">{b.occupied}</td>
-              <td className="px-3 py-2 text-right text-amber-400">{b.vacant}</td>
-              <td className="px-3 py-2 text-right text-text-muted font-mono">{fmt$(b.totalMarketRent)}</td>
-              <td className="px-3 py-2 text-right text-red-400 font-mono">{fmt$(b.totalBalance)}</td>
-              <td className="px-3 py-2 text-right text-text-muted">
+              <td className="px-3 py-2 text-right text-text-muted tabular-nums">{b.totalUnits}</td>
+              <td className="px-3 py-2 text-right text-green-400 tabular-nums">{b.occupied}</td>
+              <td className="px-3 py-2 text-right text-amber-400 tabular-nums">{b.vacant}</td>
+              <td className="px-3 py-2 text-right text-text-muted font-mono tabular-nums">{fmt$(b.totalMarketRent)}</td>
+              <td className="px-3 py-2 text-right text-red-400 font-mono tabular-nums">{fmt$(b.totalBalance)}</td>
+              <td className="px-3 py-2 text-right text-text-muted tabular-nums">
                 {b.totalUnits > 0 ? pct((b.occupied / b.totalUnits) * 100) : "—"}
               </td>
             </tr>

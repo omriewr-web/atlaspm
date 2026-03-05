@@ -6,7 +6,7 @@ import GlobalModals from "@/components/layout/global-modals";
 import { useAppStore } from "@/stores/app-store";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { sidebarOpen, setSidebarOpen } = useAppStore();
+  const { sidebarOpen, setSidebarOpen, sidebarCollapsed } = useAppStore();
 
   return (
     <div className="h-screen flex flex-col">
@@ -21,7 +21,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
         {/* Sidebar — hidden on mobile unless open */}
         <div
-          className={`fixed inset-y-0 left-0 z-40 w-56 transform transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0 lg:z-auto ${
+          className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? "w-16" : "w-56"} transform transition-all duration-200 ease-in-out lg:relative lg:translate-x-0 lg:z-auto ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >

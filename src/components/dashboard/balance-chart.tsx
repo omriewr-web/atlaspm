@@ -17,13 +17,25 @@ export default function BalanceChart({ buildings }: Props) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(250, data.length * 30)}>
       <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
+        <defs>
+          <linearGradient id="balance-bar-gradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.7} />
+            <stop offset="100%" stopColor="#60A5FA" stopOpacity={0.9} />
+          </linearGradient>
+        </defs>
         <XAxis type="number" tickFormatter={(v) => fmt$(v)} tick={{ fill: "#8899AA", fontSize: 11 }} />
         <YAxis type="category" dataKey="name" width={150} tick={{ fill: "#8899AA", fontSize: 11 }} />
         <Tooltip
           formatter={(v: number) => fmt$(v)}
-          contentStyle={{ background: "#1A2029", border: "1px solid #2A3441", borderRadius: 8, color: "#E8ECF1" }}
+          contentStyle={{
+            background: "linear-gradient(135deg, #141A24, #1A2232)",
+            border: "1px solid #2A3441",
+            borderRadius: 12,
+            color: "#E8ECF1",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}
         />
-        <Bar dataKey="balance" fill="#3B82F6" radius={[0, 4, 4, 0]} />
+        <Bar dataKey="balance" fill="url(#balance-bar-gradient)" radius={[0, 4, 4, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -6,7 +6,7 @@ import { useTenants } from "@/hooks/use-tenants";
 import { useMetrics } from "@/hooks/use-metrics";
 import { useExportExcel } from "@/hooks/use-export";
 import { generateCollectionReport } from "@/lib/report-generator";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import StatCard from "@/components/ui/stat-card";
 import { fmt$ } from "@/lib/utils";
 
@@ -38,14 +38,14 @@ export default function ReportsContent() {
     if (w) { w.document.write(html); w.document.close(); }
   }
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <PageSkeleton />;
 
   const arrearsTenants = (tenants || []).filter((t) => t.balance > 0 && t.arrearsCategory !== "current");
   const legalCount = (tenants || []).filter((t) => t.legalFlag).length;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-bold text-text-primary">Reports</h1>
+    <div className="space-y-6 animate-fade-in">
+      <h1 className="text-2xl font-bold text-text-primary">Reports</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Total Tenants" value={tenants?.length || 0} icon={BarChart3} />
@@ -72,7 +72,7 @@ export default function ReportsContent() {
         />
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div className="bg-card-gradient border border-border rounded-xl p-5">
         <h3 className="text-sm font-medium text-text-muted mb-3">Export Data</h3>
         <p className="text-xs text-text-dim mb-4">Download all tenant data as an Excel spreadsheet</p>
         <Button variant="outline" onClick={exportExcel}>
@@ -85,7 +85,7 @@ export default function ReportsContent() {
 
 function ReportCard({ title, description, onGenerate }: { title: string; description: string; onGenerate: () => void }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-5 flex flex-col">
+    <div className="bg-card-gradient border border-border rounded-xl p-5 flex flex-col">
       <h3 className="text-sm font-medium text-text-primary mb-1">{title}</h3>
       <p className="text-xs text-text-dim mb-4 flex-1">{description}</p>
       <Button variant="outline" size="sm" onClick={onGenerate}>

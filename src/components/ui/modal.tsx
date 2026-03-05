@@ -38,12 +38,12 @@ export default function Modal({ open, onClose, title, children, className, wide 
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div
         className={cn(
-          "bg-card border border-border rounded-xl shadow-2xl flex flex-col max-h-[90vh]",
+          "bg-card-gradient border border-border rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col max-h-[90vh] animate-slide-up",
           wide ? "w-full max-w-3xl" : "w-full max-w-lg",
           className
         )}

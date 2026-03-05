@@ -12,7 +12,7 @@ import TenantDetailModal from "@/components/tenant/tenant-detail-modal";
 import TenantEditModal from "@/components/tenant/tenant-edit-modal";
 import BulkActionsBar from "@/components/tenant/bulk-actions-bar";
 import Button from "@/components/ui/button";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { fmt$ } from "@/lib/utils";
 
 export default function AlertsContent() {
@@ -27,12 +27,12 @@ export default function AlertsContent() {
 
   const totalArrears = arrearsTenants.reduce((s, t) => s + t.balance, 0);
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <PageSkeleton />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-text-primary">Arrears Alerts</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Arrears Alerts</h1>
         <Button size="sm" onClick={() => setTenantCreateOpen(true)}>
           <UserPlus className="w-3.5 h-3.5" /> Add Tenant
         </Button>
@@ -48,7 +48,7 @@ export default function AlertsContent() {
       <FilterBar />
       <BulkActionsBar />
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-card-gradient border border-border rounded-xl overflow-hidden">
         <TenantTable tenants={arrearsTenants} />
       </div>
 

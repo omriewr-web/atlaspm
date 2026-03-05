@@ -4,6 +4,10 @@ interface AppState {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapsed: () => void;
+
   selectedPortfolio: string | null;
   setSelectedPortfolio: (p: string | null) => void;
 
@@ -61,6 +65,10 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+  sidebarCollapsed: false,
+  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+  toggleSidebarCollapsed: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
   selectedPortfolio: null,
   setSelectedPortfolio: (p) => set({ selectedPortfolio: p, selectedBuildingId: null }),

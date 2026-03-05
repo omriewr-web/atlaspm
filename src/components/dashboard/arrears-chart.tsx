@@ -26,13 +26,27 @@ export default function ArrearsChart({ current, d30, d60, d90plus }: Props) {
   return (
     <ResponsiveContainer width="100%" height={250}>
       <PieChart>
+        <defs>
+          {COLORS.map((color, i) => (
+            <linearGradient key={i} id={`arrears-gradient-${i}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.9} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.6} />
+            </linearGradient>
+          ))}
+        </defs>
         <Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" paddingAngle={2}>
           {data.map((_, i) => (
-            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            <Cell key={i} fill={`url(#arrears-gradient-${i})`} stroke="none" />
           ))}
         </Pie>
         <Tooltip
-          contentStyle={{ background: "#1A2029", border: "1px solid #2A3441", borderRadius: 8, color: "#E8ECF1" }}
+          contentStyle={{
+            background: "linear-gradient(135deg, #141A24, #1A2232)",
+            border: "1px solid #2A3441",
+            borderRadius: 12,
+            color: "#E8ECF1",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}
         />
         <Legend
           formatter={(v) => <span className="text-xs text-text-muted">{v}</span>}

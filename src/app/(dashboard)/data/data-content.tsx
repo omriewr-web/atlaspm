@@ -24,8 +24,8 @@ export default function DataContent() {
   const [tab, setTab] = useState<TabKey>("buildings");
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold text-text-primary">Data Management</h1>
+    <div className="space-y-4 animate-fade-in">
+      <h1 className="text-2xl font-bold text-text-primary">Data Management</h1>
 
       <div className="flex gap-1 border-b border-border overflow-x-auto">
         {tabs.map((t) => (

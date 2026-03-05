@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Wrench, Plus, List, LayoutGrid } from "lucide-react";
 import { useWorkOrders } from "@/hooks/use-work-orders";
 import StatCard from "@/components/ui/stat-card";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import Button from "@/components/ui/button";
 import KanbanBoard from "@/components/maintenance/kanban-board";
 import WorkOrderDetailModal from "@/components/maintenance/work-order-detail-modal";
@@ -44,12 +44,12 @@ export default function MaintenanceContent() {
     return wos;
   }, [workOrders, filterStatus, filterPriority]);
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <PageSkeleton />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-text-primary">Maintenance</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Maintenance</h1>
         <div className="flex items-center gap-2">
           {tab === "orders" && (
             <>
@@ -119,7 +119,7 @@ export default function MaintenanceContent() {
           {view === "kanban" ? (
             <KanbanBoard workOrders={workOrders || []} onSelect={(wo) => setSelectedWO(wo.id)} />
           ) : (
-            <div className="bg-card border border-border rounded-xl overflow-x-auto">
+            <div className="bg-card-gradient border border-border rounded-xl overflow-x-auto">
               <table className="w-full text-sm min-w-[800px]">
                 <thead>
                   <tr className="border-b border-border">

@@ -5,7 +5,7 @@ import { Users, Plus } from "lucide-react";
 import { useUsers, useDeleteUser } from "@/hooks/use-users";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import UserFormModal from "@/components/users/user-form-modal";
 import { formatDate } from "@/lib/utils";
@@ -25,18 +25,18 @@ export default function UsersContent() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <PageSkeleton />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-text-primary">User Management</h1>
+        <h1 className="text-2xl font-bold text-text-primary">User Management</h1>
         <Button onClick={() => { setMode("create"); setEditingUser(null); }}>
           <Plus className="w-4 h-4" /> Add User
         </Button>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+      <div className="bg-card-gradient border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-sm min-w-[700px]">
           <thead>
             <tr className="border-b border-border">

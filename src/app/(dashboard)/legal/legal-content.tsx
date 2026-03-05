@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Scale } from "lucide-react";
 import { useTenants } from "@/hooks/use-tenants";
 import StatCard from "@/components/ui/stat-card";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/ui/empty-state";
 import StageBadge from "@/components/legal/stage-badge";
 import LegalModal from "@/components/legal/legal-modal";
@@ -40,11 +40,11 @@ export default function LegalContent() {
     return counts;
   }, [legalTenants]);
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <PageSkeleton />;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-bold text-text-primary">Legal Cases</h1>
+    <div className="space-y-6 animate-fade-in">
+      <h1 className="text-2xl font-bold text-text-primary">Legal Cases</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Active Cases" value={legalTenants.length} icon={Scale} color="#8B5CF6" />
@@ -55,7 +55,7 @@ export default function LegalContent() {
 
       <div className="flex gap-2 flex-wrap">
         {STAGES.map((s) => (
-          <div key={s} className="bg-card border border-border rounded-lg px-3 py-2 text-center min-w-[80px]">
+          <div key={s} className="bg-card-gradient border border-border rounded-lg px-3 py-2 text-center min-w-[80px]">
             <p className="text-lg font-bold text-text-primary">{stageCounts[s]}</p>
             <p className="text-[10px] text-text-dim uppercase">{s.replace(/_/g, " ")}</p>
           </div>
@@ -63,7 +63,7 @@ export default function LegalContent() {
       </div>
 
       {legalTenants.length > 0 ? (
-        <div className="bg-card border border-border rounded-xl overflow-x-auto">
+        <div className="bg-card-gradient border border-border rounded-xl overflow-x-auto">
           <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-border">
@@ -106,7 +106,7 @@ export default function LegalContent() {
       {recommended.length > 0 && (
         <div>
           <h3 className="text-sm font-medium text-text-muted mb-3">Recommended for Legal ({recommended.length})</h3>
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="bg-card-gradient border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">

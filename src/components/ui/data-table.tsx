@@ -32,7 +32,7 @@ export default function DataTable<T>({
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead>
+        <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-border">
             {onToggleSelect && (
               <th className="px-3 py-2.5 text-left w-8">
@@ -75,14 +75,15 @@ export default function DataTable<T>({
               </td>
             </tr>
           ) : (
-            data.map((row) => {
+            data.map((row, index) => {
               const id = rowKey(row);
               return (
                 <tr
                   key={id}
                   className={cn(
-                    "border-b border-border/50 transition-colors",
-                    onRowClick && "cursor-pointer hover:bg-card-hover",
+                    "border-b border-border/50 transition-all border-l-2 border-l-transparent",
+                    index % 2 === 1 && "bg-[#141A2240]",
+                    onRowClick && "cursor-pointer hover:bg-card-hover hover:border-l-accent",
                     selectedIds?.has(id) && "bg-accent/5"
                   )}
                   onClick={() => onRowClick?.(row)}

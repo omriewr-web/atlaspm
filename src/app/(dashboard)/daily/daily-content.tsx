@@ -2,7 +2,7 @@
 
 import { CalendarClock, AlertTriangle, FileText, Scale, DollarSign, Brain } from "lucide-react";
 import { useDailySummary } from "@/hooks/use-metrics";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import TenantDetailModal from "@/components/tenant/tenant-detail-modal";
 import TenantEditModal from "@/components/tenant/tenant-edit-modal";
 import Button from "@/components/ui/button";
@@ -14,14 +14,14 @@ export default function DailyContent() {
   const { data, isLoading } = useDailySummary();
   const { setDetailTenantId, setAiPanelOpen } = useAppStore();
 
-  if (isLoading || !data) return <LoadingSpinner />;
+  if (isLoading || !data) return <PageSkeleton />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <CalendarClock className="w-5 h-5 text-accent" />
-          <h1 className="text-xl font-bold text-text-primary">Daily Summary</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Daily Summary</h1>
           <span className="text-sm text-text-dim">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
         </div>
         <Button size="sm" onClick={() => setAiPanelOpen(true)} className="bg-accent/10 text-accent border border-accent/30 hover:bg-accent/20">
@@ -120,7 +120,7 @@ export default function DailyContent() {
 
 function Section({ title, icon: Icon, iconColor, children }: { title: string; icon: any; iconColor: string; children: React.ReactNode }) {
   return (
-    <div className="bg-card border border-border rounded-xl">
+    <div className="bg-card-gradient border border-border rounded-xl">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <Icon className={`w-4 h-4 ${iconColor}`} />
         <h3 className="text-sm font-medium text-text-primary">{title}</h3>

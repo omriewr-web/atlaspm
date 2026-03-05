@@ -5,7 +5,7 @@ import { DoorOpen } from "lucide-react";
 import { useBuildings } from "@/hooks/use-buildings";
 import { useMetrics } from "@/hooks/use-metrics";
 import StatCard from "@/components/ui/stat-card";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/ui/empty-state";
 import VacancyChart from "@/components/dashboard/vacancy-chart";
 import { fmt$, pct } from "@/lib/utils";
@@ -24,11 +24,11 @@ export default function VacanciesContent() {
     [metrics]
   );
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <PageSkeleton />;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-bold text-text-primary">Vacancy Tracking</h1>
+    <div className="space-y-6 animate-fade-in">
+      <h1 className="text-2xl font-bold text-text-primary">Vacancy Tracking</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Vacant Units" value={metrics?.vacant || 0} icon={DoorOpen} color="#F59E0B" />
@@ -38,14 +38,14 @@ export default function VacanciesContent() {
       </div>
 
       {buildingsWithVacancies.length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div className="bg-card-gradient border border-border rounded-xl p-5">
           <h3 className="text-sm font-medium text-text-muted mb-4">Vacancies by Property</h3>
           <VacancyChart buildings={buildingsWithVacancies} />
         </div>
       )}
 
       {buildingsWithVacancies.length > 0 ? (
-        <div className="bg-card border border-border rounded-xl overflow-x-auto">
+        <div className="bg-card-gradient border border-border rounded-xl overflow-x-auto">
           <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-border">

@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Building2, Users, AlertTriangle, DollarSign, Scale, FileText, Shield } from "lucide-react";
 import { useMetrics } from "@/hooks/use-metrics";
 import { useBuildings, useAllBuildings } from "@/hooks/use-buildings";
 import { useViolationStats } from "@/hooks/use-violations";
 import { useComplianceItems } from "@/hooks/use-compliance";
 import StatCard from "@/components/ui/stat-card";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { fmt$, pct } from "@/lib/utils";
 import ArrearsChart from "./arrears-chart";
 import LeaseChart from "./lease-chart";
@@ -17,22 +18,23 @@ import BuildingInfo from "./building-info";
 import { useAppStore } from "@/stores/app-store";
 
 export default function DashboardContent() {
+  const router = useRouter();
   const { data: metrics, isLoading } = useMetrics();
   const { data: buildings } = useBuildings();
   const { data: allBuildings } = useAllBuildings();
-  const { selectedBuildingId, setSelectedBuildingId, selectedPortfolio, setSelectedPortfolio } = useAppStore();
+  const { selectedBuildingId, setSelectedBuildingId, selectedPortfolio, setSelectedPortfolio, setArrearsFilter, setLeaseFilter } = useAppStore();
   const selectedBuilding = buildings?.find((b) => b.id === selectedBuildingId);
 
   const portfolios = [
     ...new Set((allBuildings || []).map((b) => b.portfolio).filter(Boolean)),
   ].sort() as string[];
 
-  if (isLoading || !metrics) return <LoadingSpinner />;
+  if (isLoading || !metrics) return <PageSkeleton />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-text-primary">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
         {portfolios.length > 0 && (
           <select
             value={selectedPortfolio || ""}
@@ -50,16 +52,29 @@ export default function DashboardContent() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard label="Total Units" value={metrics.totalUnits} icon={Building2} subtext={`${pct(metrics.occupancyRate)} occupied`} />
-        <StatCard label="Occupied" value={metrics.occupied} icon={Users} color="#10B981" />
-        <StatCard label="Vacant" value={metrics.vacant} icon={Building2} color="#F59E0B" subtext={metrics.lostRent > 0 ? `${fmt$(metrics.lostRent)} lost/mo` : undefined} />
-        <StatCard label="Total Balance" value={fmt$(metrics.totalBalance)} icon={DollarSign} color="#EF4444" />
-        <StatCard label="Legal Cases" value={metrics.legalCaseCount} icon={Scale} color="#8B5CF6" />
-        <StatCard label="Expiring Leases" value={metrics.expiringSoon} icon={FileText} color="#F97316" subtext={`${metrics.expiredLease} expired`} />
+        <StatCard label="Total Units" value={metrics.totalUnits} icon={Building2} subtext={`${pct(metrics.occupancyRate)} occupied`} href="/data" />
+        <StatCard
+          label="Occupied"
+          value={metrics.occupied}
+          icon={Users}
+          color="#10B981"
+          onClick={() => { setArrearsFilter("current"); router.push("/alerts"); }}
+        />
+        <StatCard label="Vacant" value={metrics.vacant} icon={Building2} color="#F59E0B" subtext={metrics.lostRent > 0 ? `${fmt$(metrics.lostRent)} lost/mo` : undefined} href="/vacancies" />
+        <StatCard label="Total Balance" value={fmt$(metrics.totalBalance)} icon={DollarSign} color="#EF4444" href="/alerts" />
+        <StatCard label="Legal Cases" value={metrics.legalCaseCount} icon={Scale} color="#8B5CF6" href="/legal" />
+        <StatCard
+          label="Expiring Leases"
+          value={metrics.expiringSoon}
+          icon={FileText}
+          color="#F97316"
+          subtext={`${metrics.expiredLease} expired`}
+          onClick={() => { setLeaseFilter("expiring-soon"); router.push("/leases"); }}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div className="bg-card-gradient border border-border rounded-xl p-5 chart-container">
           <h3 className="text-sm font-medium text-text-muted mb-4">Arrears Distribution</h3>
           <ArrearsChart
             current={metrics.totalUnits - metrics.arrears30 - metrics.arrears60 - metrics.arrears90Plus - metrics.vacant}
@@ -68,7 +83,7 @@ export default function DashboardContent() {
             d90plus={metrics.arrears90Plus}
           />
         </div>
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div className="bg-card-gradient border border-border rounded-xl p-5 chart-container">
           <h3 className="text-sm font-medium text-text-muted mb-4">Lease Status</h3>
           <LeaseChart
             active={metrics.occupied - metrics.noLease - metrics.expiredLease - metrics.expiringSoon}
@@ -87,12 +102,12 @@ export default function DashboardContent() {
 
       {buildings && buildings.length > 0 && (
         <>
-          <div className="bg-card border border-border rounded-xl p-5">
+          <div className="bg-card-gradient border border-border rounded-xl p-5 chart-container">
             <h3 className="text-sm font-medium text-text-muted mb-4">Top Balances by Property</h3>
             <BalanceChart buildings={buildings.sort((a, b) => b.totalBalance - a.totalBalance).slice(0, 15)} />
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-5">
+          <div className="bg-card-gradient border border-border rounded-xl p-5">
             <h3 className="text-sm font-medium text-text-muted mb-4">Properties Overview</h3>
             <PropertiesTable buildings={buildings} />
           </div>
@@ -110,7 +125,7 @@ function ComplianceWidget() {
 
   return (
     <Link href="/compliance" className="block">
-      <div className="bg-card border border-border rounded-xl p-4 hover:bg-card-hover transition-colors">
+      <div className="bg-card-gradient border border-border rounded-xl p-4 hover:bg-card-hover transition-colors card-hover-lift">
         <div className="flex items-center gap-3">
           <Shield className="w-5 h-5 text-accent" />
           <div className="flex items-center gap-4 text-sm">
