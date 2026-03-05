@@ -30,14 +30,15 @@ export default function DataTable<T>({
   selectedIds, onToggleSelect, onSelectAll, emptyMessage = "No data",
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto" role="region" aria-label="Data table">
+      <table className="w-full text-sm" role="grid">
         <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-border">
             {onToggleSelect && (
-              <th className="px-3 py-2.5 text-left w-8">
+              <th className="px-3 py-2.5 text-left w-8" scope="col">
                 <input
                   type="checkbox"
+                  aria-label="Select all rows"
                   checked={data.length > 0 && selectedIds?.size === data.length}
                   onChange={onSelectAll}
                   className="rounded"
@@ -47,6 +48,8 @@ export default function DataTable<T>({
             {columns.map((col) => (
               <th
                 key={col.key}
+                scope="col"
+                aria-sort={col.sortable && sortField === col.key ? (sortDir === "asc" ? "ascending" : "descending") : undefined}
                 className={cn(
                   "px-3 py-2.5 text-left text-xs font-medium text-text-dim uppercase tracking-wider",
                   col.sortable && "cursor-pointer hover:text-text-muted select-none",
@@ -92,6 +95,7 @@ export default function DataTable<T>({
                     <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
+                        aria-label={`Select row ${id}`}
                         checked={selectedIds?.has(id) ?? false}
                         onChange={() => onToggleSelect(id)}
                         className="rounded"

@@ -9,10 +9,12 @@ export default function Header() {
   const { setAiPanelOpen, setSidebarOpen, sidebarOpen } = useAppStore();
 
   return (
-    <header className="h-14 bg-card-gradient border-b border-border shadow-[0_1px_0_rgba(59,130,246,0.1)] flex items-center justify-between px-4 sm:px-6 shrink-0">
+    <header role="banner" className="h-14 bg-card-gradient border-b border-border shadow-[0_1px_0_rgba(59,130,246,0.1)] flex items-center justify-between px-4 sm:px-6 shrink-0">
       <div className="flex items-center gap-2 sm:gap-3">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label={sidebarOpen ? "Close menu" : "Open menu"}
+          aria-expanded={sidebarOpen}
           className="p-1.5 rounded-lg text-text-dim hover:text-text-primary hover:bg-card-hover transition-colors lg:hidden"
           title="Menu"
         >
@@ -25,6 +27,7 @@ export default function Header() {
       <div className="flex items-center gap-2 sm:gap-4">
         <button
           onClick={() => setAiPanelOpen(true)}
+          aria-label="Open AI Assistant"
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm text-accent bg-accent/10 hover:bg-accent/20 border border-accent/30 transition-colors"
           title="AI Assistant"
         >
@@ -37,6 +40,7 @@ export default function Header() {
         </span>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
+          aria-label="Sign out"
           className="text-text-dim hover:text-text-muted transition-colors"
           title="Sign out"
         >

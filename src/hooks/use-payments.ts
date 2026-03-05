@@ -49,5 +49,6 @@ export function useDeletePayment(tenantId: string) {
       qc.invalidateQueries({ queryKey: ["tenants"] });
       qc.invalidateQueries({ queryKey: ["metrics"] });
     },
+    onError: () => toast.error("Failed to delete payment"),
   });
 }

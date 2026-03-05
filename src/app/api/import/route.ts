@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { parseRentRollExcel } from "@/lib/excel-import";
+import { parsedTenantRowSchema } from "@/lib/validations";
 import { getArrearsCategory, getArrearsDays, getLeaseStatus, calcCollectionScore } from "@/lib/scoring";
 import { findMatchingBuilding, fetchBuildingsForMatching, generateYardiId, normalizeAddress } from "@/lib/building-matching";
 
@@ -23,7 +24,14 @@ export const POST = withAuth(async (req, { user }) => {
   const buildingCache = new Map<string, string>();
   const existing = await fetchBuildingsForMatching();
 
-  for (const t of tenants) {
+  for (const raw of tenants) {
+    const parsed = parsedTenantRowSchema.safeParse(raw);
+    if (!parsed.success) {
+      errors.push(`${raw.unit} ${raw.name}: validation failed – ${parsed.error.issues.map((i) => i.message).join(", ")}`);
+      skipped++;
+      continue;
+    }
+    const t = parsed.data;
     try {
       const propKey = t.property || propertyName || "Unknown";
       const cacheKey = normalizeAddress(propKey);

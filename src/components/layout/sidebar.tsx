@@ -80,7 +80,7 @@ export default function Sidebar() {
         </div>
       )}
 
-      <nav className="flex-1 py-2 overflow-y-auto">
+      <nav className="flex-1 py-2 overflow-y-auto" aria-label="Main navigation">
         {sections.map(({ section, items }) => (
           <div key={section}>
             {!sidebarCollapsed && (
@@ -97,6 +97,7 @@ export default function Sidebar() {
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
                   title={sidebarCollapsed ? item.label : undefined}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-3 text-sm transition-all",
                     sidebarCollapsed ? "justify-center px-2 py-2.5" : "px-4 py-2",
@@ -128,6 +129,7 @@ export default function Sidebar() {
         )}
         <button
           onClick={toggleSidebarCollapsed}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="hidden lg:flex items-center justify-center w-full py-1.5 text-text-dim hover:text-text-muted hover:bg-card-hover rounded-lg transition-colors"
           title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >

@@ -68,5 +68,6 @@ export function useDeleteUser() {
       qc.invalidateQueries({ queryKey: ["users"] });
       toast.success("User deactivated");
     },
+    onError: () => toast.error("Failed to deactivate user"),
   });
 }

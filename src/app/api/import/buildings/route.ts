@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { parseBuildingDataExcel, buildingRowToPrismaData } from "@/lib/building-import";
 import type { ParsedBuildingRow } from "@/lib/building-import";
+import { parsedBuildingRowSchema } from "@/lib/validations";
 import { calculateNextDueDate } from "@/lib/compliance-templates";
 import { findMatchingBuilding, fetchBuildingsForMatching, generateYardiId } from "@/lib/building-matching";
 
@@ -29,6 +30,20 @@ export const POST = withAuth(async (req: NextRequest) => {
       errors: result.errors,
     }, { status: 400 });
   }
+
+  // Validate each row with Zod
+  const validBuildings: ParsedBuildingRow[] = [];
+  const validationErrors: string[] = [];
+  for (const row of result.buildings) {
+    const parsed = parsedBuildingRowSchema.safeParse(row);
+    if (!parsed.success) {
+      validationErrors.push(`Row ${row.rowIndex} (${row.address}): ${parsed.error.issues.map((i) => i.message).join(", ")}`);
+    } else {
+      validBuildings.push(row);
+    }
+  }
+  result.buildings = validBuildings;
+  result.errors.push(...validationErrors);
 
   // Match each parsed row against existing buildings
   const existingBuildings = await fetchBuildingsForMatching();

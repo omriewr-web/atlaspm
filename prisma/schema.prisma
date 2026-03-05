@@ -113,6 +113,8 @@ model Building {
   violations     Violation[]
   complianceItems ComplianceItem[]
   violationSyncLogs ViolationSyncLog[]
+  @@index([portfolio])
+  @@index([region])
   @@map("buildings")
 }
 
@@ -166,6 +168,10 @@ model Tenant {
   tasks           Task[]
   emails          EmailLog[]
   workOrders      WorkOrder[]
+  @@index([balance])
+  @@index([arrearsCategory])
+  @@index([leaseExpiration])
+  @@index([collectionScore])
   @@map("tenants")
 }
 
@@ -255,6 +261,7 @@ model LegalCase {
   updatedAt   DateTime   @updatedAt
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   notes       LegalNote[]
+  @@index([stage])
   @@map("legal_cases")
 }
 

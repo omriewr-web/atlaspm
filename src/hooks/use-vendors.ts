@@ -66,5 +66,6 @@ export function useDeleteVendor() {
       qc.invalidateQueries({ queryKey: ["vendors"] });
       toast.success("Vendor removed");
     },
+    onError: () => toast.error("Failed to delete vendor"),
   });
 }

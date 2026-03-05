@@ -86,6 +86,7 @@ export function useDeleteWorkOrder() {
       qc.invalidateQueries({ queryKey: ["work-orders"] });
       toast.success("Work order deleted");
     },
+    onError: () => toast.error("Failed to delete work order"),
   });
 }
 

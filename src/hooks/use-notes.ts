@@ -67,5 +67,6 @@ export function useDeleteNote(tenantId: string) {
       qc.invalidateQueries({ queryKey: ["notes", tenantId] });
       qc.invalidateQueries({ queryKey: ["tenants"] });
     },
+    onError: () => toast.error("Failed to delete note"),
   });
 }

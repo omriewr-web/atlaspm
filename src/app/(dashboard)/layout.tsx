@@ -3,6 +3,7 @@
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import GlobalModals from "@/components/layout/global-modals";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { useAppStore } from "@/stores/app-store";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {sidebarOpen && (
           <div
             className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            aria-hidden="true"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -27,7 +29,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           <Sidebar />
         </div>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main role="main" className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </main>
       </div>
       <GlobalModals />
     </div>
