@@ -75,7 +75,7 @@ export default function Sidebar() {
       )}
     >
       {!sidebarCollapsed && (
-        <div className="p-3 border-b border-border">
+        <div className="p-3 border-b border-border overflow-hidden">
           <PropertySelector />
         </div>
       )}

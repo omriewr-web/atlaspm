@@ -217,51 +217,60 @@ export const parsedTenantRowSchema = z.object({
 
 export const parsedBuildingRowSchema = z.object({
   rowIndex: z.number(),
+
+  // Identity
+  buildingId: z.string().min(1).max(50),
+  buildingName: z.string().max(200).optional(),
+
+  // Location
   address: z.string().min(1).max(500),
-  block: z.string().max(50).optional(),
-  lot: z.string().max(50).optional(),
-  yardiId: z.string().max(100).optional(),
+  city: z.string().max(50).optional(),
+  state: z.string().max(2).optional(),
+  zip: z.string().regex(/^\d{5}$/, "Must be 5-digit zip code"),
+  borough: z.string().min(1).max(20),
+  block: z.string().max(10).optional(),
+  lot: z.string().max(10).optional(),
+  bbl: z.string().max(10).optional(),
+  bin: z.string().max(10).optional(),
+  hpdRegistrationId: z.string().max(20).optional(),
+  certificateOfOccupancy: z.string().max(20).optional(),
   portfolio: z.string().max(200).optional(),
-  type: z.string().max(100).optional(),
-  bin: z.string().max(50).optional(),
-  mdrNumber: z.string().max(50).optional(),
-  dhcrRegId: z.string().max(100).optional(),
-  entity: z.string().max(500).optional(),
-  region: z.string().max(100).optional(),
-  zip: z.string().max(20).optional(),
-  totalUnits: z.number().int().min(0).max(10000).optional(),
-  manager: z.string().max(200).optional(),
-  mgmtStartDate: z.string().max(20).optional(),
-  einNumber: z.string().max(50).optional(),
-  owner: z.string().max(200).optional(),
-  ownerEmail: z.string().max(200).optional(),
-  squareFootage: z.number().int().min(0).max(10_000_000).optional(),
+
+  // Structure
   yearBuilt: z.number().int().min(1800).max(2100).optional(),
-  constructionType: z.string().max(100).optional(),
   floors: z.number().int().min(0).max(200).optional(),
-  floorsBelowGround: z.number().int().min(0).max(20).optional(),
-  sprinkler: z.string().max(200).optional(),
-  sprinklerCoverage: z.string().max(200).optional(),
-  fireAlarm: z.string().max(200).optional(),
-  egress: z.string().max(200).optional(),
-  backflow: z.string().max(200).optional(),
-  standpipe: z.string().max(200).optional(),
-  coolingTower: z.string().max(200).optional(),
-  waterStorageTank: z.string().max(200).optional(),
-  petroleumBulkStorage: z.string().max(200).optional(),
-  elevatorType: z.string().max(200).optional(),
-  cat1Date: z.string().max(20).optional(),
-  cat5Date: z.string().max(20).optional(),
-  elevatorNotes: z.string().max(1000).optional(),
-  elevatorAoc: z.string().max(200).optional(),
-  boilerInspection: z.string().max(20).optional(),
-  boilerDevice: z.string().max(200).optional(),
-  boilerNotes: z.string().max(1000).optional(),
-  ll152GasPipe: z.string().max(200).optional(),
-  parapetInspection: z.string().max(200).optional(),
-  hpdRegistrationYear: z.string().max(20).optional(),
-  bedBugFilingYear: z.string().max(20).optional(),
-  safetyFilingYear: z.string().max(20).optional(),
+  units: z.number().int().min(0).max(5000),
+  commercialUnits: z.number().int().min(0).max(500).optional(),
+  totalSquareFootage: z.number().int().min(0).max(10_000_000).optional(),
+  buildingClass: z.string().max(10).optional(),
+  constructionType: z.string().max(50).optional(),
+
+  // Designations
+  rentStabilized: z.boolean().optional(),
+  landmarkStatus: z.string().max(30).optional(),
+  aepStatus: z.string().max(20).optional(),
+  buildingStatus: z.string().max(30).optional(),
+
+  // Systems
+  boilerType: z.string().max(30).optional(),
+  boilerInstallYear: z.number().int().min(1950).max(2100).optional(),
+  hotWaterType: z.string().max(30).optional(),
+  gasType: z.string().max(20).optional(),
+  elevator: z.boolean().optional(),
+  elevatorCount: z.number().int().min(0).max(50).optional(),
+  sprinklerSystem: z.boolean().optional(),
+  fireAlarmSystem: z.boolean().optional(),
+  oilTank: z.boolean().optional(),
+
+  // People
+  ownerName: z.string().max(200).optional(),
+  managementCompany: z.string().max(200).optional(),
+  propertyManager: z.string().max(200).optional(),
+  superintendent: z.string().max(200).optional(),
+
+  // Meta
+  lastInspectionDate: z.string().max(20).optional(),
+  notes: z.string().max(2000).optional(),
 });
 
 // ── Compliance & Violation Schemas ──────────────────────────────

@@ -27,13 +27,13 @@ export default function PropertySelector() {
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 overflow-hidden">
       {/* Portfolio filter */}
       {portfolios.length > 0 && (
         <select
           value={selectedPortfolio || ""}
           onChange={(e) => setSelectedPortfolio(e.target.value || null)}
-          className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+          className="w-full min-w-0 bg-bg border border-border rounded-lg px-2 py-1.5 text-sm text-text-primary truncate focus:outline-none focus:border-accent"
         >
           <option value="">All Portfolios</option>
           {portfolios.map((p) => (
@@ -49,7 +49,7 @@ export default function PropertySelector() {
         <select
           value={selectedBuildingId || ""}
           onChange={(e) => setSelectedBuildingId(e.target.value || null)}
-          className="flex-1 bg-bg border border-border rounded-lg px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+          className="flex-1 min-w-0 bg-bg border border-border rounded-lg px-2 py-1.5 text-sm text-text-primary truncate focus:outline-none focus:border-accent"
         >
           <option value="">All Properties</option>
           {/* Grouped buildings */}

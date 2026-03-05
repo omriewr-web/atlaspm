@@ -55,18 +55,24 @@ model UserProperty {
 model Building {
   id             String   @id @default(cuid())
   yardiId        String   @unique
+  buildingName   String?
   address        String
   altAddress     String?
+  city           String?  @default("New York")
+  state          String?  @default("NY")
+  borough        String?
   entity         String?
   portfolio      String?
   region         String?
   zip            String?
   block          String?
   lot            String?
+  bbl            String?
   type           String   @default("Residential")
   owner          String?
   ownerEmail     String?
   manager        String?
+  managementCompany String?
   arTeam         String?
   apTeam         String?
   headPortfolio  String?
@@ -77,6 +83,8 @@ model Building {
   bin            String?  // BIN # (DOB)
   mdrNumber      String?  // MDR Number
   dhcrRegId      String?  // DHCR Registration ID
+  hpdRegistrationId String?
+  certificateOfOccupancy String?
 
   // Construction Details
   squareFootage  Int?
@@ -84,18 +92,33 @@ model Building {
   constructionType String?
   floors         Int?
   floorsBelowGround Int?
+  buildingClass  String?
 
-  // Life Safety Systems (JSON)
-  lifeSafety     Json?    // { sprinkler, sprinklerCoverage, fireAlarm, egress, backflow, standpipe, coolingTower, waterStorageTank, petroleumBulkStorage }
+  // Building Status & Designations
+  buildingStatus String   @default("active")
+  rentStabilized Boolean  @default(false)
+  landmarkStatus String   @default("none")
+  aepStatus      String   @default("none")
 
-  // Elevator Info (JSON)
-  elevatorInfo   Json?    // { type, cat1Date, cat5Date, followUpNotes, aocSubmitted }
+  // Mechanical Systems (scalar)
+  boilerType     String?
+  boilerInstallYear Int?
+  hotWaterType   String?
+  gasType        String?
+  elevator       Boolean  @default(false)
+  elevatorCount  Int      @default(0)
+  sprinklerSystem Boolean @default(false)
+  fireAlarmSystem Boolean @default(false)
+  oilTank        Boolean  @default(false)
 
-  // Boiler Info (JSON)
-  boilerInfo     Json?    // { lastInspectionDate, device, followUpNotes }
-
+  // Life Safety Systems (JSON — legacy, still populated on import)
+  lifeSafety     Json?
+  // Elevator Info (JSON — legacy, still populated on import)
+  elevatorInfo   Json?
+  // Boiler Info (JSON — legacy, still populated on import)
+  boilerInfo     Json?
   // Compliance Filing Dates (JSON)
-  complianceDates Json?   // { ll152GasPipe, parapetInspection, hpdRegistrationYear, bedBugFilingYear, safetyFilingYear }
+  complianceDates Json?
 
   superintendent Json?
   elevatorCompany Json?
@@ -103,6 +126,9 @@ model Building {
   utilityMeters  Json?
   utilityAccounts Json?
   totalUnits     Int      @default(0)
+  commercialUnits Int     @default(0)
+  lastInspectionDate DateTime?
+  notes          String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   units          Unit[]
@@ -115,6 +141,10 @@ model Building {
   violationSyncLogs ViolationSyncLog[]
   @@index([portfolio])
   @@index([region])
+  @@index([borough])
+  @@index([bbl])
+  @@index([block, lot])
+  @@index([buildingStatus])
   @@map("buildings")
 }
 
