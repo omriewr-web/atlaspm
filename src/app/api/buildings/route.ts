@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { buildingCreateSchema } from "@/lib/validations";
 import { getBuildingIdScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getDisplayAddress } from "@/lib/building-matching";
 
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
@@ -34,8 +35,7 @@ export const GET = withAuth(async (req, { user }) => {
     const totalMarketRent = b.units.reduce((sum, u) => sum + Number(u.tenant?.marketRent ?? 0), 0);
     const totalBalance = b.units.reduce((sum, u) => sum + Number(u.tenant?.balance ?? 0), 0);
 
-    // Prefer altAddress (actual street address) over entity-style address field
-    const displayAddress = (b.altAddress && b.altAddress.trim()) ? b.altAddress : b.address;
+    const displayAddress = getDisplayAddress(b);
 
     return {
       id: b.id,

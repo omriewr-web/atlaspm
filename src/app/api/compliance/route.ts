@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { complianceItemCreateSchema } from "@/lib/validations";
 import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getDisplayAddress } from "@/lib/building-matching";
 import type { ComplianceItemView } from "@/types";
 
 function mapComplianceItem(item: any): ComplianceItemView {
@@ -13,7 +14,7 @@ function mapComplianceItem(item: any): ComplianceItemView {
   return {
     id: item.id,
     buildingId: item.buildingId,
-    buildingAddress: item.building?.altAddress?.trim() || item.building?.address || "",
+    buildingAddress: item.building ? getDisplayAddress(item.building) : "",
     type: item.type,
     category: item.category,
     name: item.name,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getDisplayAddress } from "@/lib/building-matching";
 import type { ViolationView } from "@/types";
 
 function mapViolation(v: any): ViolationView {
@@ -12,7 +13,7 @@ function mapViolation(v: any): ViolationView {
   return {
     id: v.id,
     buildingId: v.buildingId,
-    buildingAddress: v.building?.altAddress?.trim() || v.building?.address || "",
+    buildingAddress: v.building ? getDisplayAddress(v.building) : "",
     source: v.source,
     externalId: v.externalId,
     class: v.class,

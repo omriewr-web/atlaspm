@@ -113,6 +113,40 @@ export async function fetchBuildingsForMatching() {
   });
 }
 
+/**
+ * Extract a street address from an entity-style building name.
+ * e.g. "Icer of 111 West 136th Street LLC(111w136)" → "111 West 136th Street"
+ *      "1776 Castle Hill Apt Owners, LLC(1776cast)" → "1776 Castle Hill"
+ */
+export function extractAddressFromEntity(name: string): string | null {
+  // Remove yardiId parenthesized suffix
+  let clean = name.replace(/\([^)]+\)$/, "").trim();
+  // Remove LLC/Inc/etc and common suffixes
+  clean = clean
+    .replace(/\s*[-–]\s*(Rental|Coop|Co-op|Commercial)\s*$/i, "")
+    .replace(/,?\s*(L\.?L\.?C\.?|LLC|Inc\.?|Corp\.?|LP|Associates?|Group|Holdings?|Holding|Management|Owners?|Properties|Property|Realty|Ltd\.?|Co\.?,?\s*Ltd\.?)\s*$/gi, "")
+    .replace(/,?\s*(L\.?L\.?C\.?|LLC|Inc\.?|Corp\.?|LP|Associates?|Group|Holdings?|Holding|Management|Owners?|Properties|Property|Realty|Ltd\.?|Co\.?,?\s*Ltd\.?)\s*$/gi, "")
+    .trim()
+    .replace(/,\s*$/, "")
+    .replace(/\s*&\s*$/, "")
+    .trim();
+  // Remove common prefixes like "Icer of", "Rebar"
+  clean = clean
+    .replace(/^(?:Icer\s+of|Rebar|ICER\s+of)\s+/i, "")
+    .trim();
+  // Must start with a number to be a street address
+  if (/^\d/.test(clean)) return clean;
+  return null;
+}
+
+/**
+ * Get the best display address for a building, preferring altAddress over extracted address over raw address.
+ */
+export function getDisplayAddress(building: { address: string; altAddress?: string | null }): string {
+  if (building.altAddress?.trim()) return building.altAddress.trim();
+  return extractAddressFromEntity(building.address) || building.address;
+}
+
 export function generateYardiId(address: string): string {
   const sanitized = address
     .replace(/[^a-zA-Z0-9]/g, "-")

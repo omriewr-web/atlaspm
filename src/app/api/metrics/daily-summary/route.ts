@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getDisplayAddress } from "@/lib/building-matching";
 
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
@@ -15,7 +16,7 @@ export const GET = withAuth(async (req, { user }) => {
   const [urgentTenants, recentNotes, recentPayments, legalCases] = await Promise.all([
     prisma.tenant.findMany({
       where: { ...scope, collectionScore: { gte: 60 } },
-      include: { unit: { include: { building: { select: { address: true } } } }, legalCase: { select: { stage: true } } },
+      include: { unit: { include: { building: { select: { address: true, altAddress: true } } } }, legalCase: { select: { stage: true } } },
       orderBy: { collectionScore: "desc" },
       take: 20,
     }),
@@ -33,7 +34,7 @@ export const GET = withAuth(async (req, { user }) => {
     }),
     prisma.legalCase.findMany({
       where: { inLegal: true, tenant: scope },
-      include: { tenant: { select: { name: true, balance: true }, include: { unit: { select: { unitNumber: true, building: { select: { address: true } } } } } } },
+      include: { tenant: { select: { name: true, balance: true }, include: { unit: { select: { unitNumber: true, building: { select: { address: true, altAddress: true } } } } } } },
       orderBy: { updatedAt: "desc" },
       take: 10,
     }),
@@ -41,7 +42,7 @@ export const GET = withAuth(async (req, { user }) => {
 
   const expiringLeases = await prisma.tenant.findMany({
     where: { ...scope, leaseStatus: "expiring-soon" },
-    include: { unit: { include: { building: { select: { address: true } } } } },
+    include: { unit: { include: { building: { select: { address: true, altAddress: true } } } } },
     orderBy: { leaseExpiration: "asc" },
     take: 10,
   });
@@ -52,7 +53,7 @@ export const GET = withAuth(async (req, { user }) => {
       name: t.name,
       balance: Number(t.balance),
       collectionScore: t.collectionScore,
-      building: t.unit.building.address,
+      building: getDisplayAddress(t.unit.building),
       unit: t.unit.unitNumber,
       legalStage: t.legalCase?.stage,
     })),
@@ -63,7 +64,7 @@ export const GET = withAuth(async (req, { user }) => {
       id: t.id,
       name: t.name,
       leaseExpiration: t.leaseExpiration,
-      building: t.unit.building.address,
+      building: getDisplayAddress(t.unit.building),
       unit: t.unit.unitNumber,
     })),
   });

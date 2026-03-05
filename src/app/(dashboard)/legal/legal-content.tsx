@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Scale } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Scale, Upload } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { useTenants } from "@/hooks/use-tenants";
+import Button from "@/components/ui/button";
 import StatCard from "@/components/ui/stat-card";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/ui/empty-state";
@@ -19,6 +22,33 @@ const STAGES = [
 export default function LegalContent() {
   const { data: tenants, isLoading } = useTenants();
   const [selectedTenant, setSelectedTenant] = useState<TenantView | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const qc = useQueryClient();
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/import/legal", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Import failed");
+      toast.success(`Imported ${data.imported} legal cases${data.skipped ? `, ${data.skipped} skipped` : ""}`);
+      if (data.errors?.length) {
+        console.warn("Import errors:", data.errors);
+      }
+      qc.invalidateQueries({ queryKey: ["tenants"] });
+      qc.invalidateQueries({ queryKey: ["metrics"] });
+    } catch (err: any) {
+      toast.error(err.message || "Import failed");
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const legalTenants = useMemo(
     () => (tenants || []).filter((t) => t.legalFlag),
@@ -44,7 +74,15 @@ export default function LegalContent() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-bold text-text-primary">Legal Cases</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-text-primary">Legal Cases</h1>
+        <div>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+          <Button size="sm" onClick={() => fileRef.current?.click()} disabled={importing}>
+            <Upload className="w-3.5 h-3.5" /> {importing ? "Importing..." : "Import Cases"}
+          </Button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Active Cases" value={legalTenants.length} icon={Scale} color="#8B5CF6" />

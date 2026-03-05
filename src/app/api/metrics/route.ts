@@ -47,16 +47,19 @@ export const GET = withAuth(async (req, { user }) => {
     unitWhere.building = { ...unitWhere.building, portfolio };
   }
 
-  const units = await prisma.unit.count({ where: unitWhere });
+  const [totalUnitCount, vacantUnitCount] = await Promise.all([
+    prisma.unit.count({ where: unitWhere }),
+    prisma.unit.count({ where: { ...unitWhere, isVacant: true } }),
+  ]);
+  const units = totalUnitCount;
+  const occupied = totalUnitCount - vacantUnitCount;
+  const vacant = vacantUnitCount;
 
   const legalWhere: any = { inLegal: true };
   if (Object.keys(tenantScope as object).length > 0) {
     legalWhere.tenant = tenantScope;
   }
   const legalCaseCount = await prisma.legalCase.count({ where: legalWhere });
-
-  const occupied = tenants.filter((t) => !t.unit.isVacant).length;
-  const vacant = units - occupied;
   const totalMarketRent = tenants.reduce((s, t) => s + Number(t.marketRent), 0);
   const totalBalance = tenants.reduce((s, t) => s + Number(t.balance), 0);
   const lostRent = tenants

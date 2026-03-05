@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { exportToExcel } from "@/lib/excel-export";
 import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getDisplayAddress } from "@/lib/building-matching";
 import { TenantView } from "@/types";
 
 export const GET = withAuth(async (req, { user }) => {
@@ -34,7 +35,7 @@ export const GET = withAuth(async (req, { user }) => {
     unitNumber: t.unit.unitNumber,
     unitType: t.unit.unitType,
     buildingId: t.unit.building.id,
-    buildingAddress: t.unit.building.altAddress?.trim() || t.unit.building.address,
+    buildingAddress: getDisplayAddress(t.unit.building),
     buildingRegion: t.unit.building.region,
     entity: t.unit.building.entity,
     portfolio: t.unit.building.portfolio,

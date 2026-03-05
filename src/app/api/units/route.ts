@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getDisplayAddress } from "@/lib/building-matching";
 
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
@@ -28,7 +29,7 @@ export const GET = withAuth(async (req, { user }) => {
       unitType: u.unitType,
       isVacant: u.isVacant,
       buildingId: u.building.id,
-      buildingAddress: u.building.altAddress?.trim() || u.building.address,
+      buildingAddress: getDisplayAddress(u.building),
       tenantId: u.tenant?.id ?? null,
       tenantName: u.tenant?.name ?? null,
       marketRent: u.tenant ? Number(u.tenant.marketRent) : null,

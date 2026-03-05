@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { workOrderCreateSchema } from "@/lib/validations";
 import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getDisplayAddress } from "@/lib/building-matching";
 import { WorkOrderView } from "@/types";
 
 function mapWorkOrder(wo: any): WorkOrderView {
@@ -19,7 +20,7 @@ function mapWorkOrder(wo: any): WorkOrderView {
     scheduledDate: wo.scheduledDate?.toISOString() ?? null,
     completedDate: wo.completedDate?.toISOString() ?? null,
     buildingId: wo.buildingId,
-    buildingAddress: wo.building?.altAddress?.trim() || wo.building?.address || "",
+    buildingAddress: wo.building ? getDisplayAddress(wo.building) : "",
     unitId: wo.unitId,
     unitNumber: wo.unit?.unitNumber ?? null,
     tenantId: wo.tenantId,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AlertTriangle, UserPlus } from "lucide-react";
+import { AlertTriangle, UserPlus, Clock, CalendarClock } from "lucide-react";
 import { useTenants } from "@/hooks/use-tenants";
 import { useMetrics } from "@/hooks/use-metrics";
 import { useAppStore } from "@/stores/app-store";
@@ -26,6 +26,10 @@ export default function AlertsContent() {
   );
 
   const totalArrears = arrearsTenants.reduce((s, t) => s + t.balance, 0);
+  const arrears30Tenants = arrearsTenants.filter((t) => t.arrearsCategory === "30");
+  const arrears60Tenants = arrearsTenants.filter((t) => t.arrearsCategory === "60");
+  const arrears30Total = arrears30Tenants.reduce((s, t) => s + t.balance, 0);
+  const arrears60Total = arrears60Tenants.reduce((s, t) => s + t.balance, 0);
 
   if (isLoading) return <PageSkeleton />;
 
@@ -41,8 +45,8 @@ export default function AlertsContent() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Total in Arrears" value={arrearsTenants.length} icon={AlertTriangle} />
         <StatCard label="Total Owed" value={fmt$(totalArrears)} color="#EF4444" />
-        <StatCard label="30 Day" value={metrics?.arrears30 || 0} color="#3B82F6" />
-        <StatCard label="60 Day" value={metrics?.arrears60 || 0} color="#F59E0B" />
+        <StatCard label="30 Day" value={arrears30Tenants.length} icon={Clock} color="#3B82F6" subtext={arrears30Total > 0 ? fmt$(arrears30Total) : undefined} />
+        <StatCard label="60 Day" value={arrears60Tenants.length} icon={CalendarClock} color="#F59E0B" subtext={arrears60Total > 0 ? fmt$(arrears60Total) : undefined} />
       </div>
 
       <FilterBar />

@@ -5,6 +5,7 @@ import { tenantCreateSchema } from "@/lib/validations";
 import { TenantView } from "@/types";
 import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { getArrearsCategory, getArrearsDays, getLeaseStatus, calcCollectionScore } from "@/lib/scoring";
+import { getDisplayAddress } from "@/lib/building-matching";
 
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
@@ -65,7 +66,7 @@ export const GET = withAuth(async (req, { user }) => {
     unitNumber: t.unit.unitNumber,
     unitType: t.unit.unitType,
     buildingId: t.unit.building.id,
-    buildingAddress: (t.unit.building.altAddress?.trim()) || t.unit.building.address,
+    buildingAddress: getDisplayAddress(t.unit.building),
     buildingRegion: t.unit.building.region,
     entity: t.unit.building.entity,
     portfolio: t.unit.building.portfolio,
