@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { hasPermission, UserRole } from "@/types";
 import PropertySelector from "./property-selector";
+import { useAppStore } from "@/stores/app-store";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, perm: "dash" },
@@ -38,9 +39,10 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = (session?.user?.role || "COLLECTOR") as UserRole;
+  const { setSidebarOpen } = useAppStore();
 
   return (
-    <aside className="w-56 bg-card border-r border-border flex flex-col shrink-0">
+    <aside className="w-56 h-full bg-card border-r border-border flex flex-col shrink-0">
       <div className="p-3 border-b border-border">
         <PropertySelector />
       </div>
@@ -53,6 +55,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-2 text-sm transition-colors",
                   active

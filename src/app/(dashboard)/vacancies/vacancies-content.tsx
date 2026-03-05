@@ -45,8 +45,8 @@ export default function VacanciesContent() {
       )}
 
       {buildingsWithVacancies.length > 0 ? (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-card border border-border rounded-xl overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Property</th>
@@ -61,13 +61,13 @@ export default function VacanciesContent() {
               {buildingsWithVacancies.map((b) => (
                 <tr key={b.id} className="border-b border-border/50 hover:bg-card-hover transition-colors">
                   <td className="px-3 py-2 text-text-primary">{b.address}</td>
-                  <td className="px-3 py-2 text-right text-text-muted">{b.totalUnits}</td>
-                  <td className="px-3 py-2 text-right text-green-400">{b.occupied}</td>
-                  <td className="px-3 py-2 text-right text-amber-400 font-bold">{b.vacant}</td>
-                  <td className="px-3 py-2 text-right text-amber-400">
+                  <td className="px-3 py-2 text-right text-text-muted font-mono">{b.totalUnits}</td>
+                  <td className="px-3 py-2 text-right text-green-400 font-mono">{b.occupied}</td>
+                  <td className="px-3 py-2 text-right text-amber-400 font-bold font-mono">{b.vacant}</td>
+                  <td className="px-3 py-2 text-right text-amber-400 font-mono">
                     {b.totalUnits > 0 ? pct((b.vacant / b.totalUnits) * 100) : "—"}
                   </td>
-                  <td className="px-3 py-2 text-right text-text-muted">{fmt$(b.totalMarketRent)}</td>
+                  <td className="px-3 py-2 text-right text-text-muted font-mono">{fmt$(b.totalMarketRent)}</td>
                 </tr>
               ))}
             </tbody>

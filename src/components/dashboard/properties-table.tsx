@@ -36,8 +36,8 @@ export default function PropertiesTable({ buildings }: Props) {
               <td className="px-3 py-2 text-right text-text-muted">{b.totalUnits}</td>
               <td className="px-3 py-2 text-right text-green-400">{b.occupied}</td>
               <td className="px-3 py-2 text-right text-amber-400">{b.vacant}</td>
-              <td className="px-3 py-2 text-right text-text-muted">{fmt$(b.totalMarketRent)}</td>
-              <td className="px-3 py-2 text-right text-red-400">{fmt$(b.totalBalance)}</td>
+              <td className="px-3 py-2 text-right text-text-muted font-mono">{fmt$(b.totalMarketRent)}</td>
+              <td className="px-3 py-2 text-right text-red-400 font-mono">{fmt$(b.totalBalance)}</td>
               <td className="px-3 py-2 text-right text-text-muted">
                 {b.totalUnits > 0 ? pct((b.occupied / b.totalUnits) * 100) : "—"}
               </td>

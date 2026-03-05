@@ -74,8 +74,8 @@ export default function TrackerTab() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+        <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="border-b border-border text-left">
               <th className="px-4 py-3 text-xs font-medium text-text-dim uppercase">Name</th>
@@ -110,7 +110,7 @@ export default function TrackerTab() {
                 </td>
                 <td className="px-4 py-3 text-text-muted text-xs truncate max-w-[150px]">{item.buildingAddress}</td>
                 <td className="px-4 py-3 text-text-muted text-xs">{item.assignedVendorName || "—"}</td>
-                <td className="px-4 py-3 text-text-muted">{Number(item.cost) > 0 ? fmt$(item.cost) : "—"}</td>
+                <td className="px-4 py-3 text-text-muted font-mono">{Number(item.cost) > 0 ? fmt$(item.cost) : "—"}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1">
                     <button onClick={() => { setEditItem(item); setModalOpen(true); }} className="p-1 text-text-dim hover:text-accent" title="Edit">

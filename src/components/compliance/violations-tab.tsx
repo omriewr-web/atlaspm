@@ -160,8 +160,8 @@ export default function ViolationsTab() {
       )}
 
       {/* Violations table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+        <table className="w-full text-sm min-w-[800px]">
           <thead>
             <tr className="border-b border-border text-left">
               <th className="px-4 py-3 text-xs font-medium text-text-dim uppercase">Source</th>
@@ -187,7 +187,7 @@ export default function ViolationsTab() {
                 <td className="px-4 py-3"><ClassBadge cls={v.class} /></td>
                 <td className="px-4 py-3 text-text-muted truncate max-w-[250px]">{v.description}</td>
                 <td className="px-4 py-3 text-text-muted text-xs">{v.currentStatus || "—"}</td>
-                <td className="px-4 py-3 text-text-muted">{Number(v.penaltyAmount) > 0 ? fmt$(v.penaltyAmount) : "—"}</td>
+                <td className="px-4 py-3 text-text-muted font-mono">{Number(v.penaltyAmount) > 0 ? fmt$(v.penaltyAmount) : "—"}</td>
                 <td className="px-4 py-3"><CureBadge days={v.daysUntilCure} /></td>
               </tr>
             ))}

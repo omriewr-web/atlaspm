@@ -18,7 +18,7 @@ export default function StatCard({ label, value, subtext, icon: Icon, color, cla
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs text-text-dim uppercase tracking-wider">{label}</p>
-          <p className="text-2xl font-bold mt-1" style={color ? { color } : undefined}>
+          <p className="text-2xl font-bold font-mono mt-1" style={color ? { color } : undefined}>
             {value}
           </p>
           {subtext && <p className="text-xs text-text-muted mt-1">{subtext}</p>}

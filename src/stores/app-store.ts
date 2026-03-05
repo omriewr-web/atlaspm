@@ -1,6 +1,9 @@
 import { create } from "zustand";
 
 interface AppState {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+
   selectedPortfolio: string | null;
   setSelectedPortfolio: (p: string | null) => void;
 
@@ -56,6 +59,9 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  sidebarOpen: false,
+  setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
   selectedPortfolio: null,
   setSelectedPortfolio: (p) => set({ selectedPortfolio: p, selectedBuildingId: null }),
 

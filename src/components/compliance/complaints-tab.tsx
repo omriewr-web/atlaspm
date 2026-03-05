@@ -13,8 +13,8 @@ export default function ComplaintsTab() {
     <div className="space-y-4">
       <p className="text-sm text-text-muted">{complaints?.length || 0} complaints</p>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+        <table className="w-full text-sm min-w-[700px]">
           <thead>
             <tr className="border-b border-border text-left">
               <th className="px-4 py-3 text-xs font-medium text-text-dim uppercase">Complaint ID</th>

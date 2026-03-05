@@ -63,8 +63,8 @@ export default function LegalContent() {
       </div>
 
       {legalTenants.length > 0 ? (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-card border border-border rounded-xl overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Tenant</th>
@@ -82,7 +82,7 @@ export default function LegalContent() {
                     <span className="text-text-dim text-xs ml-1">#{t.unitNumber}</span>
                   </td>
                   <td className="px-3 py-2 text-text-muted text-xs">{t.buildingAddress}</td>
-                  <td className="px-3 py-2 text-right text-red-400">{fmt$(t.balance)}</td>
+                  <td className="px-3 py-2 text-right text-red-400 font-mono">{fmt$(t.balance)}</td>
                   <td className="px-3 py-2">
                     <StageBadge stage={t.legalStage?.toUpperCase().replace(/-/g, "_") || "NOTICE_SENT"} />
                   </td>
@@ -123,7 +123,7 @@ export default function LegalContent() {
                       <span className="text-text-primary">{t.name}</span>
                       <span className="text-text-dim text-xs ml-1">#{t.unitNumber} — {t.buildingAddress}</span>
                     </td>
-                    <td className="px-3 py-2 text-right text-red-400">{fmt$(t.balance)}</td>
+                    <td className="px-3 py-2 text-right text-red-400 font-mono">{fmt$(t.balance)}</td>
                     <td className="px-3 py-2 text-right text-orange-400 font-mono font-bold">{t.collectionScore}</td>
                     <td className="px-3 py-2">
                       <button

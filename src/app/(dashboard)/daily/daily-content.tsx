@@ -45,7 +45,7 @@ export default function DailyContent() {
                     <span className="text-text-dim text-xs ml-2">#{t.unit} — {t.building}</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-red-400 text-sm font-medium">{fmt$(t.balance)}</span>
+                    <span className="text-red-400 text-sm font-medium font-mono">{fmt$(t.balance)}</span>
                     <span className="font-mono text-xs font-bold" style={{ color }}>
                       {t.collectionScore}
                     </span>
@@ -85,7 +85,7 @@ export default function DailyContent() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-red-400 text-xs">{fmt$(Number(c.tenant?.balance || 0))}</span>
+                  <span className="text-red-400 text-xs font-mono">{fmt$(Number(c.tenant?.balance || 0))}</span>
                   <span className="text-purple-400 text-xs">{c.stage?.replace(/_/g, " ")}</span>
                 </div>
               </div>
@@ -104,7 +104,7 @@ export default function DailyContent() {
                   <span className="text-text-dim text-xs ml-2">by {p.recorder?.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-green-400 text-sm font-medium">{fmt$(Number(p.amount))}</span>
+                  <span className="text-green-400 text-sm font-medium font-mono">{fmt$(Number(p.amount))}</span>
                   <span className="text-text-dim text-xs">{formatDate(p.createdAt)}</span>
                 </div>
               </div>

@@ -59,8 +59,8 @@ export default function UnitsTab() {
         </Button>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+        <table className="w-full text-sm min-w-[700px]">
           <thead>
             <tr className="border-b border-border text-left">
               <th className="px-4 py-3 text-xs font-medium text-text-dim uppercase">Unit</th>
@@ -80,8 +80,8 @@ export default function UnitsTab() {
                 <td className="px-4 py-3 text-text-muted">{u.unitType || "—"}</td>
                 <td className="px-4 py-3 text-text-muted">{u.buildingAddress}</td>
                 <td className="px-4 py-3 text-text-muted">{u.tenantName || "—"}</td>
-                <td className="px-4 py-3 text-text-muted">{u.marketRent ? fmt$(u.marketRent) : "—"}</td>
-                <td className="px-4 py-3 text-text-muted">{u.balance ? fmt$(u.balance) : "—"}</td>
+                <td className="px-4 py-3 text-text-muted font-mono">{u.marketRent ? fmt$(u.marketRent) : "—"}</td>
+                <td className="px-4 py-3 text-text-muted font-mono">{u.balance ? fmt$(u.balance) : "—"}</td>
                 <td className="px-4 py-3">
                   {u.isVacant ? (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">Vacant</span>

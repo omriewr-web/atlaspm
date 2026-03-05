@@ -27,18 +27,18 @@ export default function ComplianceContent() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-text-primary">Compliance & Violations</h1>
 
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-border overflow-x-auto">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
               tab === t.key
                 ? "text-accent border-b-2 border-accent"
                 : "text-text-dim hover:text-text-muted"
             }`}
           >
-            <t.icon className="w-4 h-4" />
+            <t.icon className="w-4 h-4 shrink-0" />
             {t.label}
           </button>
         ))}

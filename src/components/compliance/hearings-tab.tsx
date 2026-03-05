@@ -34,8 +34,8 @@ export default function HearingsTab() {
 
 function HearingsTable({ rows }: { rows: any[] }) {
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="bg-card border border-border rounded-xl overflow-x-auto">
+      <table className="w-full text-sm min-w-[600px]">
         <thead>
           <tr className="border-b border-border text-left">
             <th className="px-4 py-3 text-xs font-medium text-text-dim uppercase">Date</th>
@@ -54,7 +54,7 @@ function HearingsTable({ rows }: { rows: any[] }) {
               <td className="px-4 py-3 text-text-muted">{v.source}</td>
               <td className="px-4 py-3 text-text-primary font-mono text-xs">{v.externalId}</td>
               <td className="px-4 py-3 text-text-muted text-xs">{v.hearingStatus || v.currentStatus || "—"}</td>
-              <td className="px-4 py-3 text-text-muted">{Number(v.penaltyAmount) > 0 ? fmt$(v.penaltyAmount) : "—"}</td>
+              <td className="px-4 py-3 text-text-muted font-mono">{Number(v.penaltyAmount) > 0 ? fmt$(v.penaltyAmount) : "—"}</td>
             </tr>
           ))}
         </tbody>

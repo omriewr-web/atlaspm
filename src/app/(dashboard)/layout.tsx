@@ -1,14 +1,33 @@
+"use client";
+
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import GlobalModals from "@/components/layout/global-modals";
+import { useAppStore } from "@/stores/app-store";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { sidebarOpen, setSidebarOpen } = useAppStore();
+
   return (
     <div className="h-screen flex flex-col">
       <Header />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        {/* Sidebar — hidden on mobile unless open */}
+        <div
+          className={`fixed inset-y-0 left-0 z-40 w-56 transform transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0 lg:z-auto ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <Sidebar />
+        </div>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
       <GlobalModals />
     </div>

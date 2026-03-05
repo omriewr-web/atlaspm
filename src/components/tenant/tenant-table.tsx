@@ -62,14 +62,14 @@ export default function TenantTable({ tenants, showBuilding = true, showLease = 
       sortable: true,
       className: "text-right",
       render: (t: TenantView) => (
-        <span className={t.balance > 0 ? "text-red-400" : "text-green-400"}>{fmt$(t.balance)}</span>
+        <span className={`font-mono ${t.balance > 0 ? "text-red-400" : "text-green-400"}`}>{fmt$(t.balance)}</span>
       ),
     },
     {
       key: "marketRent",
       label: "Rent",
       className: "text-right",
-      render: (t: TenantView) => <span className="text-text-muted">{fmt$(t.marketRent)}</span>,
+      render: (t: TenantView) => <span className="text-text-muted font-mono">{fmt$(t.marketRent)}</span>,
     },
     {
       key: "arrears",
