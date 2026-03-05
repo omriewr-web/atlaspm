@@ -76,6 +76,40 @@ export interface UtilityJson {
   water?: string;
 }
 
+export interface LifeSafetyJson {
+  sprinkler?: string;
+  sprinklerCoverage?: string;
+  fireAlarm?: string;
+  egress?: string;
+  backflow?: string;
+  standpipe?: string;
+  coolingTower?: string;
+  waterStorageTank?: string;
+  petroleumBulkStorage?: string;
+}
+
+export interface ElevatorInfoJson {
+  type?: string;
+  cat1Date?: string;
+  cat5Date?: string;
+  followUpNotes?: string;
+  aocSubmitted?: string;
+}
+
+export interface BoilerInfoJson {
+  lastInspectionDate?: string;
+  device?: string;
+  followUpNotes?: string;
+}
+
+export interface ComplianceDatesJson {
+  ll152GasPipe?: string;
+  parapetInspection?: string;
+  hpdRegistrationYear?: string;
+  bedBugFilingYear?: string;
+  safetyFilingYear?: string;
+}
+
 export interface BuildingView {
   id: string;
   yardiId: string;
@@ -89,12 +123,25 @@ export interface BuildingView {
   lot: string | null;
   type: string;
   owner: string | null;
+  ownerEmail: string | null;
   manager: string | null;
   arTeam: string | null;
   apTeam: string | null;
   headPortfolio: string | null;
   mgmtStartDate: string | null;
   einNumber: string | null;
+  bin: string | null;
+  mdrNumber: string | null;
+  dhcrRegId: string | null;
+  squareFootage: number | null;
+  yearBuilt: number | null;
+  constructionType: string | null;
+  floors: number | null;
+  floorsBelowGround: number | null;
+  lifeSafety: LifeSafetyJson | null;
+  elevatorInfo: ElevatorInfoJson | null;
+  boilerInfo: BoilerInfoJson | null;
+  complianceDates: ComplianceDatesJson | null;
   superintendent: ContactJson | null;
   elevatorCompany: CompanyJson | null;
   fireAlarmCompany: CompanyJson | null;

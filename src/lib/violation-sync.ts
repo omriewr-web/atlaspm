@@ -10,6 +10,7 @@ import {
   mapEcbViolation,
   mapHpdComplaint,
 } from "./nyc-open-data";
+import type { FetchResult } from "./nyc-open-data";
 
 type Source = "HPD" | "DOB" | "ECB" | "HPD_COMPLAINTS";
 
@@ -19,6 +20,8 @@ interface SyncResult {
   source: string;
   newCount: number;
   updatedCount: number;
+  rowsFetched: number;
+  apiUrl?: string;
   error?: string;
 }
 
@@ -32,13 +35,17 @@ export async function syncBuildingViolations(
   });
 
   if (!building || !building.block || !building.lot) {
-    return [{ buildingId, address: building?.address || "", source: "ALL", newCount: 0, updatedCount: 0, error: "Missing block/lot" }];
+    console.log(`[Sync] Skipping building ${buildingId}: missing block/lot`);
+    return [{ buildingId, address: building?.address || "", source: "ALL", newCount: 0, updatedCount: 0, rowsFetched: 0, error: "Missing block/lot" }];
   }
 
   const boroId = detectBoroId(building.address, building.zip);
   if (!boroId) {
-    return [{ buildingId, address: building.address, source: "ALL", newCount: 0, updatedCount: 0, error: "Could not detect borough" }];
+    console.log(`[Sync] Skipping building ${building.address}: could not detect borough`);
+    return [{ buildingId, address: building.address, source: "ALL", newCount: 0, updatedCount: 0, rowsFetched: 0, error: `Could not detect borough from address "${building.address}" zip "${building.zip}"` }];
   }
+
+  console.log(`[Sync] Building: ${building.address} | block=${building.block} lot=${building.lot} boroId=${boroId}`);
 
   const activeSources: Source[] = (sources?.length
     ? sources.filter((s): s is Source => ["HPD", "DOB", "ECB", "HPD_COMPLAINTS"].includes(s))
@@ -50,30 +57,40 @@ export async function syncBuildingViolations(
     let newCount = 0;
     let updatedCount = 0;
     try {
-      let rows: any[] = [];
+      let fetchResult: FetchResult;
       let mapper: (row: any, bid: string) => any;
 
       switch (source) {
         case "HPD":
-          rows = await fetchHpdViolations(building.block, building.lot, boroId);
+          fetchResult = await fetchHpdViolations(building.block, building.lot, boroId);
           mapper = mapHpdViolation;
           break;
         case "DOB":
-          rows = await fetchDobViolations(building.block, building.lot, boroId);
+          fetchResult = await fetchDobViolations(building.block, building.lot, boroId);
           mapper = mapDobViolation;
           break;
         case "ECB":
-          rows = await fetchEcbViolations(building.block, building.lot, boroId);
+          fetchResult = await fetchEcbViolations(building.block, building.lot, boroId);
           mapper = mapEcbViolation;
           break;
         case "HPD_COMPLAINTS":
-          rows = await fetchHpdComplaints(building.block, building.lot, boroId);
+          fetchResult = await fetchHpdComplaints(building.block, building.lot, boroId);
           mapper = mapHpdComplaint;
           break;
       }
 
+      const rows = fetchResult!.rows;
+
+      if (fetchResult!.error) {
+        console.error(`[Sync] ${source} API error: ${fetchResult!.error}`);
+        results.push({ buildingId, address: building.address, source, newCount: 0, updatedCount: 0, rowsFetched: 0, apiUrl: fetchResult!.url, error: fetchResult!.error });
+        continue;
+      }
+
+      console.log(`[Sync] ${source}: ${rows.length} rows fetched`);
+
       for (const row of rows) {
-        const mapped = mapper(row, buildingId);
+        const mapped = mapper!(row, buildingId);
         if (!mapped.where.source_externalId.externalId) continue;
 
         const existing = await prisma.violation.findUnique({ where: mapped.where });
@@ -112,13 +129,14 @@ export async function syncBuildingViolations(
         data: { buildingId, source, newCount, updatedCount, status: "completed" },
       });
 
-      results.push({ buildingId, address: building.address, source, newCount, updatedCount });
+      console.log(`[Sync] ${source} done: ${newCount} new, ${updatedCount} updated`);
+      results.push({ buildingId, address: building.address, source, newCount, updatedCount, rowsFetched: rows.length, apiUrl: fetchResult!.url });
     } catch (err: any) {
-      console.error(`Sync error for ${source} on ${building.address}:`, err);
+      console.error(`[Sync] Error for ${source} on ${building.address}:`, err);
       await prisma.violationSyncLog.create({
         data: { buildingId, source, newCount: 0, updatedCount: 0, status: `error: ${err.message}` },
       });
-      results.push({ buildingId, address: building.address, source, newCount: 0, updatedCount: 0, error: err.message });
+      results.push({ buildingId, address: building.address, source, newCount: 0, updatedCount: 0, rowsFetched: 0, error: err.message });
     }
   }
 
@@ -133,6 +151,8 @@ export async function syncAllBuildings(sources?: string[]): Promise<SyncResult[]
     },
     select: { id: true },
   });
+
+  console.log(`[Sync] Syncing ${buildings.length} buildings with block/lot data`);
 
   const allResults: SyncResult[] = [];
   for (const building of buildings) {

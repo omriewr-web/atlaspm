@@ -42,12 +42,25 @@ export const GET = withAuth(async (req, { user }) => {
       lot: b.lot,
       type: b.type,
       owner: b.owner,
+      ownerEmail: b.ownerEmail,
       manager: b.manager,
       arTeam: b.arTeam,
       apTeam: b.apTeam,
       headPortfolio: b.headPortfolio,
       mgmtStartDate: b.mgmtStartDate,
       einNumber: b.einNumber,
+      bin: b.bin,
+      mdrNumber: b.mdrNumber,
+      dhcrRegId: b.dhcrRegId,
+      squareFootage: b.squareFootage,
+      yearBuilt: b.yearBuilt,
+      constructionType: b.constructionType,
+      floors: b.floors,
+      floorsBelowGround: b.floorsBelowGround,
+      lifeSafety: b.lifeSafety,
+      elevatorInfo: b.elevatorInfo,
+      boilerInfo: b.boilerInfo,
+      complianceDates: b.complianceDates,
       superintendent: b.superintendent,
       elevatorCompany: b.elevatorCompany,
       fireAlarmCompany: b.fireAlarmCompany,
@@ -67,7 +80,7 @@ export const GET = withAuth(async (req, { user }) => {
 
 // Convert null JSON fields to Prisma.DbNull for proper storage
 function sanitizeJsonFields(data: any) {
-  const jsonFields = ["superintendent", "elevatorCompany", "fireAlarmCompany", "utilityMeters", "utilityAccounts"];
+  const jsonFields = ["superintendent", "elevatorCompany", "fireAlarmCompany", "utilityMeters", "utilityAccounts", "lifeSafety", "elevatorInfo", "boilerInfo", "complianceDates"];
   const result = { ...data };
   for (const field of jsonFields) {
     if (result[field] === null) {

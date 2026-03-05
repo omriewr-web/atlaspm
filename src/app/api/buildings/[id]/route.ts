@@ -25,7 +25,7 @@ export const PATCH = withAuth(async (req, { params }) => {
   const { id } = await params;
   const body = await req.json();
   // Convert null JSON fields to Prisma.DbNull
-  const jsonFields = ["superintendent", "elevatorCompany", "fireAlarmCompany", "utilityMeters", "utilityAccounts"];
+  const jsonFields = ["superintendent", "elevatorCompany", "fireAlarmCompany", "utilityMeters", "utilityAccounts", "lifeSafety", "elevatorInfo", "boilerInfo", "complianceDates"];
   const data = { ...body };
   for (const field of jsonFields) {
     if (field in data && data[field] === null) {

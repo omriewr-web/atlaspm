@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { RefreshCw, AlertTriangle, DollarSign, Calendar, Scale } from "lucide-react";
+import { RefreshCw, AlertTriangle, DollarSign, Calendar, Bug } from "lucide-react";
 import { useViolations, useViolationStats, useSyncViolations } from "@/hooks/use-violations";
 import { useAppStore } from "@/stores/app-store";
+import { useBuildings } from "@/hooks/use-buildings";
 import Button from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import { fmt$, formatDate } from "@/lib/utils";
@@ -37,10 +38,15 @@ function ClassBadge({ cls }: { cls: string | null }) {
 
 export default function ViolationsTab() {
   const { selectedBuildingId } = useAppStore();
+  const { data: buildings } = useBuildings();
   const [filterSource, setFilterSource] = useState("");
   const [filterClass, setFilterClass] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [selectedViolation, setSelectedViolation] = useState<ViolationView | null>(null);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testLoading, setTestLoading] = useState(false);
+  const [showTestPanel, setShowTestPanel] = useState(false);
+  const [testBuildingId, setTestBuildingId] = useState("");
 
   const { data: violations, isLoading } = useViolations({
     source: filterSource || undefined,
@@ -85,6 +91,14 @@ export default function ViolationsTab() {
         <div className="flex-1" />
         <Button
           size="sm"
+          variant="outline"
+          onClick={() => setShowTestPanel(!showTestPanel)}
+        >
+          <Bug className="w-3.5 h-3.5" />
+          Test Sync
+        </Button>
+        <Button
+          size="sm"
           onClick={() => syncMutation.mutate(selectedBuildingId ? { buildingId: selectedBuildingId } : {})}
           disabled={syncMutation.isPending}
         >
@@ -92,6 +106,58 @@ export default function ViolationsTab() {
           {syncMutation.isPending ? "Syncing..." : "Sync Now"}
         </Button>
       </div>
+
+      {/* Test Sync Debug Panel */}
+      {showTestPanel && (
+        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-text-primary">Debug: Test NYC Open Data Fetch</h3>
+          <div className="flex items-end gap-3">
+            <div>
+              <label className="block text-xs text-text-dim mb-1">Building</label>
+              <select
+                value={testBuildingId}
+                onChange={(e) => setTestBuildingId(e.target.value)}
+                className="bg-bg border border-border rounded-lg px-2.5 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+              >
+                <option value="">Select a building...</option>
+                {buildings?.map((b) => (
+                  <option key={b.id} value={b.id}>{b.address}</option>
+                ))}
+              </select>
+            </div>
+            <Button
+              size="sm"
+              disabled={!testBuildingId || testLoading}
+              onClick={async () => {
+                setTestLoading(true);
+                setTestResult(null);
+                try {
+                  const sources = ["HPD", "DOB", "ECB", "HPD_COMPLAINTS"];
+                  const results: any[] = [];
+                  for (const source of sources) {
+                    const res = await fetch(`/api/violations/test?buildingId=${testBuildingId}&source=${source}`);
+                    results.push(await res.json());
+                  }
+                  setTestResult(results);
+                } catch (err: any) {
+                  setTestResult({ error: err.message });
+                } finally {
+                  setTestLoading(false);
+                }
+              }}
+            >
+              {testLoading ? "Testing..." : "Run Test"}
+            </Button>
+          </div>
+          {testResult && (
+            <div className="bg-bg border border-border rounded-lg p-3 overflow-auto max-h-96">
+              <pre className="text-xs text-text-muted whitespace-pre-wrap font-mono">
+                {JSON.stringify(testResult, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Violations table */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">

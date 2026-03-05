@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Eye, Building2, Users, Phone, Mail, Zap, Flame, ArrowUpDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Building2, Users, Phone, Mail, Zap, Flame, ArrowUpDown, Shield, HardHat, Gauge, FileCheck } from "lucide-react";
 import { useBuildings, useDeleteBuilding, useBuilding } from "@/hooks/use-buildings";
 import { useAppStore } from "@/stores/app-store";
 import Button from "@/components/ui/button";
@@ -108,6 +108,10 @@ function BuildingDetailCard({ id, onClose }: { id: string | null; onClose: () =>
   const fire = building?.fireAlarmCompany as any;
   const meters = building?.utilityMeters as any;
   const accounts = building?.utilityAccounts as any;
+  const lifeSafety = building?.lifeSafety as any;
+  const elevatorInfo = building?.elevatorInfo as any;
+  const boilerInfo = building?.boilerInfo as any;
+  const compDates = building?.complianceDates as any;
   const units = building?.units || [];
 
   return (
@@ -141,6 +145,9 @@ function BuildingDetailCard({ id, onClose }: { id: string | null; onClose: () =>
                   <Field label="Lot" value={building.lot} />
                   <Field label="Unit Count" value={units.length || building.totalUnits} />
                   <Field label="EIN Number" value={building.einNumber} />
+                  <Field label="BIN # (DOB)" value={building.bin} />
+                  <Field label="MDR Number" value={building.mdrNumber} />
+                  <Field label="DHCR Reg ID" value={building.dhcrRegId} />
                 </div>
               </Section>
 
@@ -150,18 +157,75 @@ function BuildingDetailCard({ id, onClose }: { id: string | null; onClose: () =>
                   <Field label="Manager" value={building.manager} />
                   <Field label="Mgmt Start Date" value={formatDate(building.mgmtStartDate)} />
                   <Field label="Owner" value={building.owner} />
+                  <Field label="Owner Email" value={building.ownerEmail} />
                   <Field label="Head of Portfolio" value={building.headPortfolio} />
                   <Field label="AP Team" value={building.apTeam} />
                   <Field label="AR Team" value={building.arTeam} />
+                </div>
+              </Section>
+
+              {/* Construction Details */}
+              <Section title="Construction Details" icon={HardHat}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <Field label="Square Footage" value={building.squareFootage ? `${building.squareFootage.toLocaleString()} sq ft` : null} />
+                  <Field label="Year Built" value={building.yearBuilt} />
+                  <Field label="Construction Type" value={building.constructionType} />
+                  <Field label="Floors" value={building.floors} />
+                  <Field label="Floors Below Ground" value={building.floorsBelowGround} />
                 </div>
               </Section>
             </div>
 
             {/* Right Column */}
             <div className="space-y-5">
+              {/* Life Safety Systems */}
+              <Section title="Life Safety Systems" icon={Shield}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <Field label="Sprinkler System" value={lifeSafety?.sprinkler} />
+                  <Field label="Sprinkler Coverage" value={lifeSafety?.sprinklerCoverage} />
+                  <Field label="Fire Alarm" value={lifeSafety?.fireAlarm} />
+                  <Field label="Means of Egress" value={lifeSafety?.egress} />
+                  <Field label="Backflow" value={lifeSafety?.backflow} />
+                  <Field label="Standpipe" value={lifeSafety?.standpipe} />
+                  <Field label="Cooling Tower" value={lifeSafety?.coolingTower} />
+                  <Field label="Water Storage Tank" value={lifeSafety?.waterStorageTank} />
+                  <Field label="Petroleum/Oil Tank" value={lifeSafety?.petroleumBulkStorage} />
+                </div>
+              </Section>
+
+              {/* Elevator Info */}
+              <Section title="Elevator Info" icon={ArrowUpDown}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <Field label="Elevator Type" value={elevatorInfo?.type} />
+                  <Field label="CAT 1 Date" value={elevatorInfo?.cat1Date} />
+                  <Field label="CAT 5 Date" value={elevatorInfo?.cat5Date} />
+                  <Field label="AOC Submitted" value={elevatorInfo?.aocSubmitted} />
+                  <Field label="Follow-up Notes" value={elevatorInfo?.followUpNotes} full />
+                </div>
+              </Section>
+
+              {/* Boiler Info */}
+              <Section title="Boiler Info" icon={Gauge}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <Field label="Last Inspection" value={boilerInfo?.lastInspectionDate} />
+                  <Field label="Boiler Device" value={boilerInfo?.device} />
+                  <Field label="Follow-up Notes" value={boilerInfo?.followUpNotes} full />
+                </div>
+              </Section>
+
+              {/* Compliance Filing Dates */}
+              <Section title="Compliance Filing Dates" icon={FileCheck}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <Field label="LL152 Gas Pipe" value={compDates?.ll152GasPipe} />
+                  <Field label="Parapet Inspection" value={compDates?.parapetInspection} />
+                  <Field label="HPD Registration Year" value={compDates?.hpdRegistrationYear} />
+                  <Field label="Bed Bug Filing Year" value={compDates?.bedBugFilingYear} />
+                  <Field label="Safety Filing Year" value={compDates?.safetyFilingYear} />
+                </div>
+              </Section>
+
               {/* Building Services */}
               <Section title="Building Services">
-                {/* Superintendent */}
                 <ServiceCard
                   title="Superintendent"
                   icon={<Phone className="w-3.5 h-3.5" />}
@@ -169,7 +233,6 @@ function BuildingDetailCard({ id, onClose }: { id: string | null; onClose: () =>
                   phone={sup?.phone}
                   email={sup?.email}
                 />
-                {/* Elevator Company */}
                 <ServiceCard
                   title="Elevator Company"
                   icon={<ArrowUpDown className="w-3.5 h-3.5" />}
@@ -177,7 +240,6 @@ function BuildingDetailCard({ id, onClose }: { id: string | null; onClose: () =>
                   phone={elev?.phone}
                   extra={elev?.contract ? `Contract: ${elev.contract}` : undefined}
                 />
-                {/* Fire Alarm */}
                 <ServiceCard
                   title="Fire Alarm Company"
                   icon={<Flame className="w-3.5 h-3.5" />}
@@ -186,30 +248,32 @@ function BuildingDetailCard({ id, onClose }: { id: string | null; onClose: () =>
                   extra={fire?.contract ? `Contract: ${fire.contract}` : undefined}
                 />
               </Section>
-
-              {/* Utilities */}
-              <Section title="Utilities" icon={Zap}>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-text-dim mb-1.5">Meter Numbers</p>
-                    <div className="space-y-1 text-sm">
-                      <UtilityRow label="Gas" value={meters?.gas} />
-                      <UtilityRow label="Electric" value={meters?.electric} />
-                      <UtilityRow label="Water" value={meters?.water} />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-text-dim mb-1.5">Account Numbers</p>
-                    <div className="space-y-1 text-sm">
-                      <UtilityRow label="Gas" value={accounts?.gas} />
-                      <UtilityRow label="Electric" value={accounts?.electric} />
-                      <UtilityRow label="Water" value={accounts?.water} />
-                    </div>
-                  </div>
-                </div>
-              </Section>
             </div>
           </div>
+
+          {/* Utilities — full width */}
+          {(meters || accounts) && (
+            <Section title="Utilities" icon={Zap}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-text-dim mb-1.5">Meter Numbers</p>
+                  <div className="space-y-1 text-sm">
+                    <UtilityRow label="Gas" value={meters?.gas} />
+                    <UtilityRow label="Electric" value={meters?.electric} />
+                    <UtilityRow label="Water" value={meters?.water} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-text-dim mb-1.5">Account Numbers</p>
+                  <div className="space-y-1 text-sm">
+                    <UtilityRow label="Gas" value={accounts?.gas} />
+                    <UtilityRow label="Electric" value={accounts?.electric} />
+                    <UtilityRow label="Water" value={accounts?.water} />
+                  </div>
+                </div>
+              </div>
+            </Section>
+          )}
 
           {/* Units list — full width below */}
           {units.length > 0 && (

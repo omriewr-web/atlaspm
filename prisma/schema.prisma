@@ -65,12 +65,38 @@ model Building {
   lot            String?
   type           String   @default("Residential")
   owner          String?
+  ownerEmail     String?
   manager        String?
   arTeam         String?
   apTeam         String?
   headPortfolio  String?
   mgmtStartDate  DateTime?
   einNumber      String?
+
+  // DOB / Registration IDs
+  bin            String?  // BIN # (DOB)
+  mdrNumber      String?  // MDR Number
+  dhcrRegId      String?  // DHCR Registration ID
+
+  // Construction Details
+  squareFootage  Int?
+  yearBuilt      Int?
+  constructionType String?
+  floors         Int?
+  floorsBelowGround Int?
+
+  // Life Safety Systems (JSON)
+  lifeSafety     Json?    // { sprinkler, sprinklerCoverage, fireAlarm, egress, backflow, standpipe, coolingTower, waterStorageTank, petroleumBulkStorage }
+
+  // Elevator Info (JSON)
+  elevatorInfo   Json?    // { type, cat1Date, cat5Date, followUpNotes, aocSubmitted }
+
+  // Boiler Info (JSON)
+  boilerInfo     Json?    // { lastInspectionDate, device, followUpNotes }
+
+  // Compliance Filing Dates (JSON)
+  complianceDates Json?   // { ll152GasPipe, parapetInspection, hpdRegistrationYear, bedBugFilingYear, safetyFilingYear }
+
   superintendent Json?
   elevatorCompany Json?
   fireAlarmCompany Json?
