@@ -36,9 +36,16 @@ model User {
   legalNotes    LegalNote[]
   tasks         Task[]
   emails        EmailLog[]
-  assignedWorkOrders  WorkOrder[] @relation("WorkOrderAssignee")
-  createdWorkOrders   WorkOrder[] @relation("WorkOrderCreator")
-  workOrderComments   WorkOrderComment[]
+  assignedWorkOrders    WorkOrder[] @relation("WorkOrderAssignee")
+  createdWorkOrders     WorkOrder[] @relation("WorkOrderCreator")
+  workOrderComments     WorkOrderComment[]
+  assignedViolations    Violation[]
+  assignedCollections   CollectionCase[] @relation("CollectionAssignee")
+  assignedVacancies     Vacancy[]        @relation("VacancyAssignee")
+  assignedLegalCases    LegalCase[]      @relation("LegalCaseAssignee")
+  assignedInspections   Inspection[]     @relation("InspectionAssignee")
+  assignedMoveOuts      MoveOutAssessment[] @relation("MoveOutAssignee")
+  activityEvents        ActivityEvent[]
   @@map("users")
 }
 
@@ -136,9 +143,23 @@ model Building {
   importBatches  ImportBatch[]
   workOrders     WorkOrder[]
   maintenanceSchedules MaintenanceSchedule[]
+  organizationId String?
+  ownerId        String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  ownerRecord    Owner?        @relation(fields: [ownerId], references: [id])
   violations     Violation[]
   complianceItems ComplianceItem[]
   violationSyncLogs ViolationSyncLog[]
+  legalCases        LegalCase[]
+  collectionCases   CollectionCase[]
+  vacancies         Vacancy[]
+  inspections       Inspection[]
+  inspectionItems   InspectionItem[]
+  moveOutAssessments MoveOutAssessment[]
+  moveOutCharges    MoveOutCharge[]
+  activityEvents    ActivityEvent[]
+  @@index([organizationId])
+  @@index([ownerId])
   @@index([portfolio])
   @@index([region])
   @@index([borough])
@@ -160,6 +181,15 @@ model Unit {
   workOrders  WorkOrder[]
   maintenanceSchedules MaintenanceSchedule[]
   leases      Lease[]
+  violations    Violation[]
+  legalCases    LegalCase[]
+  collectionCases   CollectionCase[]
+  vacancies         Vacancy[]
+  inspections       Inspection[]
+  inspectionItems   InspectionItem[]
+  moveOutAssessments MoveOutAssessment[]
+  moveOutCharges    MoveOutCharge[]
+  activityEvents    ActivityEvent[]
   @@unique([buildingId, unitNumber])
   @@map("units")
 }
@@ -201,6 +231,10 @@ model Tenant {
   workOrders      WorkOrder[]
   leases          Lease[]
   balanceSnapshots BalanceSnapshot[]
+  collectionCases   CollectionCase[]
+  moveOutAssessments MoveOutAssessment[]
+  moveOutCharges    MoveOutCharge[]
+  activityEvents    ActivityEvent[]
   @@index([balance])
   @@index([arrearsCategory])
   @@index([leaseExpiration])
@@ -283,23 +317,37 @@ enum LegalStage {
 }
 
 model LegalCase {
-  id              String     @id @default(cuid())
-  tenantId        String     @unique
-  inLegal         Boolean    @default(true)
-  stage           LegalStage @default(NOTICE_SENT)
-  caseNumber      String?
-  attorney        String?
-  filedDate       DateTime?
-  courtDate       DateTime?
-  arrearsBalance  Decimal?   @db.Decimal(10, 2)
-  status          String     @default("active")  // active, settled, dismissed, withdrawn
-  importBatchId   String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  notes           LegalNote[]
+  id               String     @id @default(cuid())
+  tenantId         String     @unique
+  buildingId       String?
+  unitId           String?
+  collectionCaseId String?
+  attorneyId       String?
+  assignedUserId   String?
+  inLegal          Boolean    @default(true)
+  stage            LegalStage @default(NOTICE_SENT)
+  caseNumber       String?
+  attorney         String?
+  filedDate        DateTime?
+  courtDate        DateTime?
+  arrearsBalance   Decimal?   @db.Decimal(10, 2)
+  status           String     @default("active")  // active, settled, dismissed, withdrawn
+  importBatchId    String?
+  isActive         Boolean    @default(true)
+  notes_text       String?    @db.Text
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  building         Building?       @relation(fields: [buildingId], references: [id])
+  unit             Unit?           @relation(fields: [unitId], references: [id])
+  collectionCase   CollectionCase? @relation(fields: [collectionCaseId], references: [id])
+  attorneyContact  Vendor?         @relation("LegalCaseAttorney", fields: [attorneyId], references: [id])
+  assignedUser     User?           @relation("LegalCaseAssignee", fields: [assignedUserId], references: [id])
+  notes            LegalNote[]
   @@index([stage])
   @@index([status])
+  @@index([buildingId])
+  @@index([collectionCaseId])
   @@map("legal_cases")
 }
 
@@ -455,18 +503,23 @@ enum MaintenanceFrequency {
 }
 
 model Vendor {
-  id         String   @id @default(cuid())
-  name       String
-  company    String?
-  email      String?
-  phone      String?
-  specialty  String?
-  hourlyRate Decimal? @db.Decimal(10, 2)
-  notes      String?  @db.Text
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  workOrders WorkOrder[]
+  id          String   @id @default(cuid())
+  name        String
+  company     String?
+  email       String?
+  phone       String?
+  specialty   String?
+  contactType String   @default("vendor")  // vendor | broker | attorney
+  hourlyRate  Decimal? @db.Decimal(10, 2)
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workOrders  WorkOrder[]
   complianceItems ComplianceItem[]
+  vacanciesBrokered Vacancy[]   @relation("VacancyBroker")
+  legalCasesAsAttorney LegalCase[] @relation("LegalCaseAttorney")
+  violationsAssigned   Violation[] @relation("ViolationVendor")
+  @@index([contactType])
   @@map("vendors")
 }
 
@@ -488,6 +541,8 @@ model WorkOrder {
   vendorId       String?
   assignedToId   String?
   createdById    String?
+  sourceType     String?           // manual | inspection | violation | vacancy | move_out
+  sourceId       String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   building       Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
@@ -498,9 +553,11 @@ model WorkOrder {
   createdBy      User?             @relation("WorkOrderCreator", fields: [createdById], references: [id])
   comments       WorkOrderComment[]
   violations     Violation[]
+  inspectionItems InspectionItem[]
   @@index([buildingId])
   @@index([status])
   @@index([priority])
+  @@index([sourceType, sourceId])
   @@map("work_orders")
 }
 
@@ -594,6 +651,9 @@ enum ComplianceStatus {
 model Violation {
   id                  String            @id @default(cuid())
   buildingId          String
+  unitId              String?
+  assignedUserId      String?
+  assignedVendorId    String?
   source              ViolationSource
   externalId          String
   class               ViolationClass?
@@ -606,6 +666,10 @@ model Violation {
   respondByDate       DateTime?
   certifiedDismissDate DateTime?
   correctionDate      DateTime?
+  targetCompletionDate DateTime?
+  certificationDate   DateTime?
+  remediationNotes    String?           @db.Text
+  isOpen              Boolean           @default(true)
   unitNumber          String?
   novDescription      String?           @db.Text
   hearingDate         DateTime?
@@ -614,12 +678,17 @@ model Violation {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   building            Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit                Unit?             @relation(fields: [unitId], references: [id])
+  assignedUser        User?             @relation(fields: [assignedUserId], references: [id])
+  assignedVendor      Vendor?           @relation("ViolationVendor", fields: [assignedVendorId], references: [id])
   linkedWorkOrder     WorkOrder?        @relation(fields: [linkedWorkOrderId], references: [id])
   complianceItems     ComplianceItem[]
   @@unique([source, externalId])
   @@index([buildingId])
+  @@index([unitId])
   @@index([source])
   @@index([currentStatus])
+  @@index([isOpen])
   @@index([hearingDate])
   @@index([respondByDate])
   @@map("violations")
@@ -882,4 +951,208 @@ model ImportFeedback {
   @@index([importRunId])
   @@index([importProfileId])
   @@map("import_feedback")
+}
+
+// ── Core Entity Models ──────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  buildings Building[]
+  activityEvents ActivityEvent[]
+  @@map("organizations")
+}
+
+model Owner {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  buildings Building[]
+  @@map("owners")
+}
+
+// ── Operational Records ─────────────────────────────────────────
+
+model CollectionCase {
+  id              String   @id @default(cuid())
+  buildingId      String
+  unitId          String
+  tenantId        String
+  assignedUserId  String?
+  balanceOwed     Decimal  @default(0) @db.Decimal(10, 2)
+  daysLate        Int      @default(0)
+  status          String   @default("new_arrears") // new_arrears | reminder_sent | payment_plan | notice_served | legal_review | legal_filed
+  lastActionDate  DateTime?
+  nextActionDate  DateTime?
+  notes           String?  @db.Text
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  building        Building @relation(fields: [buildingId], references: [id])
+  unit            Unit     @relation(fields: [unitId], references: [id])
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  assignedUser    User?    @relation("CollectionAssignee", fields: [assignedUserId], references: [id])
+  legalCases      LegalCase[]
+  @@index([buildingId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([isActive])
+  @@map("collection_cases")
+}
+
+model Vacancy {
+  id              String   @id @default(cuid())
+  buildingId      String
+  unitId          String
+  brokerId        String?
+  assignedUserId  String?
+  stage           String   @default("vacant") // vacant | renovation | listed | showing | application | lease_signed
+  askingRent      Decimal? @db.Decimal(10, 2)
+  showingsCount   Int      @default(0)
+  listedDate      DateTime?
+  applicationDate DateTime?
+  leaseSignedDate DateTime?
+  moveInDate      DateTime?
+  notes           String?  @db.Text
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  building        Building @relation(fields: [buildingId], references: [id])
+  unit            Unit     @relation(fields: [unitId], references: [id])
+  broker          Vendor?  @relation("VacancyBroker", fields: [brokerId], references: [id])
+  assignedUser    User?    @relation("VacancyAssignee", fields: [assignedUserId], references: [id])
+  @@index([buildingId])
+  @@index([unitId])
+  @@index([isActive])
+  @@index([stage])
+  @@map("vacancies")
+}
+
+model Inspection {
+  id              String   @id @default(cuid())
+  buildingId      String
+  unitId          String?
+  assignedUserId  String?
+  inspectionType  String
+  frequencyType   String   @default("one_time") // monthly | weekly | move_in | move_out | one_time
+  scheduledFor    DateTime?
+  completedAt     DateTime?
+  overallStatus   String   @default("pending") // pending | in_progress | completed | cancelled
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  building        Building   @relation(fields: [buildingId], references: [id])
+  unit            Unit?      @relation(fields: [unitId], references: [id])
+  assignedUser    User?      @relation("InspectionAssignee", fields: [assignedUserId], references: [id])
+  items           InspectionItem[]
+  moveOutAssessments MoveOutAssessment[]
+  @@index([buildingId])
+  @@index([scheduledFor])
+  @@index([overallStatus])
+  @@map("inspections")
+}
+
+model InspectionItem {
+  id                    String   @id @default(cuid())
+  inspectionId          String
+  buildingId            String
+  unitId                String?
+  label                 String
+  status                String   @default("pending") // pass | fail | needs_attention | na | pending
+  notes                 String?  @db.Text
+  generatedWorkOrderId  String?
+  createdAt             DateTime @default(now())
+  inspection            Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  building              Building   @relation(fields: [buildingId], references: [id])
+  unit                  Unit?      @relation(fields: [unitId], references: [id])
+  generatedWorkOrder    WorkOrder? @relation(fields: [generatedWorkOrderId], references: [id])
+  @@index([inspectionId])
+  @@map("inspection_items")
+}
+
+model MoveOutAssessment {
+  id                        String   @id @default(cuid())
+  buildingId                String
+  unitId                    String
+  tenantId                  String
+  inspectionId              String?
+  assignedUserId            String?
+  securityDepositAmount     Decimal  @default(0) @db.Decimal(10, 2)
+  recommendedChargesTotal   Decimal  @default(0) @db.Decimal(10, 2)
+  recommendedDepositReturn  Decimal  @default(0) @db.Decimal(10, 2)
+  recommendationStatus      String   @default("draft") // draft | reviewed | approved | sent
+  draftEmailBody            String?  @db.Text
+  completedAt               DateTime?
+  notes                     String?  @db.Text
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  building                  Building    @relation(fields: [buildingId], references: [id])
+  unit                      Unit        @relation(fields: [unitId], references: [id])
+  tenant                    Tenant      @relation(fields: [tenantId], references: [id])
+  inspection                Inspection? @relation(fields: [inspectionId], references: [id])
+  assignedUser              User?       @relation("MoveOutAssignee", fields: [assignedUserId], references: [id])
+  charges                   MoveOutCharge[]
+  @@index([buildingId])
+  @@index([tenantId])
+  @@map("move_out_assessments")
+}
+
+model MoveOutCharge {
+  id                  String   @id @default(cuid())
+  moveOutAssessmentId String
+  buildingId          String
+  unitId              String
+  tenantId            String
+  chargeCode          String
+  chargeLabel         String
+  quantity            Int      @default(1)
+  unitPrice           Decimal  @db.Decimal(10, 2)
+  totalPrice          Decimal  @db.Decimal(10, 2)
+  notes               String?  @db.Text
+  createdAt           DateTime @default(now())
+  assessment          MoveOutAssessment @relation(fields: [moveOutAssessmentId], references: [id], onDelete: Cascade)
+  building            Building @relation(fields: [buildingId], references: [id])
+  unit                Unit     @relation(fields: [unitId], references: [id])
+  tenant              Tenant   @relation(fields: [tenantId], references: [id])
+  @@index([moveOutAssessmentId])
+  @@map("move_out_charges")
+}
+
+// ── Shared Activity Timeline ────────────────────────────────────
+
+model ActivityEvent {
+  id                String   @id @default(cuid())
+  eventType         String   // legal_case_created | work_order_completed | payment_received | vacancy_listed | inspection_completed | collection_escalated | ...
+  title             String
+  description       String?  @db.Text
+  organizationId    String?
+  buildingId        String?
+  unitId            String?
+  tenantId          String?
+  relatedRecordType String?  // LegalCase | WorkOrder | CollectionCase | Vacancy | Inspection | MoveOutAssessment | ...
+  relatedRecordId   String?
+  createdByUserId   String?
+  eventTimestamp    DateTime @default(now())
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  organization      Organization? @relation(fields: [organizationId], references: [id])
+  building          Building?     @relation(fields: [buildingId], references: [id])
+  unit              Unit?         @relation(fields: [unitId], references: [id])
+  tenant            Tenant?       @relation(fields: [tenantId], references: [id])
+  createdByUser     User?         @relation(fields: [createdByUserId], references: [id])
+  @@index([buildingId, eventTimestamp(sort: Desc)])
+  @@index([unitId, eventTimestamp(sort: Desc)])
+  @@index([tenantId, eventTimestamp(sort: Desc)])
+  @@index([organizationId, eventTimestamp(sort: Desc)])
+  @@index([relatedRecordType, relatedRecordId])
+  @@index([eventType])
+  @@map("activity_events")
 }
