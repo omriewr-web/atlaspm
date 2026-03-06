@@ -84,6 +84,9 @@ function LoginForm() {
           </button>
         </form>
       </div>
+      <p className="text-center text-xs text-text-dim mt-6">
+        &copy; 2026 AtlasPM&trade;. All rights reserved.
+      </p>
     </div>
   );
 }
