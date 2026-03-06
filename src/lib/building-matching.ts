@@ -122,7 +122,7 @@ export async function fetchBuildingsForMatching() {
 
 /**
  * Extract a street address from an entity-style building name.
- * e.g. "Icer of 111 West 136th Street LLC(111w136)" → "111 West 136th Street"
+ * e.g. "Atlas of 111 West 136th Street LLC(111w136)" → "111 West 136th Street"
  *      "1776 Castle Hill Apt Owners, LLC(1776cast)" → "1776 Castle Hill"
  */
 export function extractAddressFromEntity(name: string): string | null {
@@ -137,9 +137,9 @@ export function extractAddressFromEntity(name: string): string | null {
     .replace(/,\s*$/, "")
     .replace(/\s*&\s*$/, "")
     .trim();
-  // Remove common prefixes like "Icer of", "Rebar"
+  // Remove common entity prefixes before an address
   clean = clean
-    .replace(/^(?:Icer\s+of|Rebar|ICER\s+of)\s+/i, "")
+    .replace(/^(?:Atlas\s+of|Rebar)\s+/i, "")
     .trim();
   // Must start with a number to be a street address
   if (/^\d/.test(clean)) return clean;

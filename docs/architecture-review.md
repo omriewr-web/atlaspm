@@ -492,7 +492,7 @@ async function importTenantFile(buffer: Buffer, filename: string) {
   // 1. Parse Excel to raw 2D array
   const { workbook, sheet, rawRows } = parseExcel(buffer);
 
-  // 2. Detect format (yardi-rentroll, icer-aging, atlaspm-template, generic)
+  // 2. Detect format (yardi-rentroll, atlas-aging, atlaspm-template, generic)
   const format = detectFormat(workbook, rawRows);
 
   // 3. Map headers to canonical field names

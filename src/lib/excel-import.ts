@@ -67,7 +67,7 @@ function norm(s: string): string {
 // Format detection
 // ---------------------------------------------------------------------------
 
-type Format = "yardi-rentroll" | "icer-aging" | "yardi-aging" | "generic";
+type Format = "yardi-rentroll" | "atlas-aging" | "yardi-aging" | "generic";
 
 function detectFormat(
   wb: XLSX.WorkBook,
@@ -76,7 +76,7 @@ function detectFormat(
 ): Format {
   // Check sheet names
   const sheetNames = wb.SheetNames.map((s) => s.toLowerCase());
-  if (sheetNames.includes("ar aging")) return "icer-aging";
+  if (sheetNames.includes("ar aging")) return "atlas-aging";
 
   // Check first cell for Yardi report signatures
   const a1 = String(rawRows[0]?.[0] ?? "").toLowerCase();
@@ -99,7 +99,7 @@ function detectFormat(
   const firstRowKeys = rawRows[0] ?? [];
   const headerStr = firstRowKeys.map((v: any) => norm(String(v))).join(",");
   if (headerStr.includes("property") && headerStr.includes("tenant"))
-    return "icer-aging";
+    return "atlas-aging";
   if (headerStr.includes("property") && headerStr.includes("unit"))
     return "generic";
 
@@ -312,13 +312,13 @@ function parseYardiRentRoll(
 }
 
 // ---------------------------------------------------------------------------
-// ICER AR Aging parser
+// Atlas AR Aging parser
 // ---------------------------------------------------------------------------
 // Clean headers: Property, Unit, Tenant, Resident ID, Market Rent, Legal Rent,
 // Pref Rent, Actual Rent, Stabilized, Balance, Aging Bucket, Days Delinquent,
 // Months Owed, Lease Status, Legal, Collection Score, Last Note
 
-function parseICERAging(rows: any[]): ParseResult {
+function parseAtlasAging(rows: any[]): ParseResult {
   const errors: string[] = [];
   const tenants: ParsedTenant[] = [];
   let propertyName = "";
@@ -376,7 +376,7 @@ function parseICERAging(rows: any[]): ParseResult {
     });
   }
 
-  return { tenants, propertyName, errors, format: "icer-aging" };
+  return { tenants, propertyName, errors, format: "atlas-aging" };
 }
 
 // ---------------------------------------------------------------------------
@@ -612,10 +612,10 @@ export function parseRentRollExcel(buffer: Buffer): ParseResult {
   switch (format) {
     case "yardi-rentroll":
       return parseYardiRentRoll(sheet, rawRows);
-    case "icer-aging": {
-      // ICER aging has clean headers in row 1, so re-parse with default header mode
+    case "atlas-aging": {
+      // Atlas aging has clean headers in row 1, so re-parse with default header mode
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-      return parseICERAging(rows);
+      return parseAtlasAging(rows);
     }
     case "yardi-aging":
       return parseYardiAging(sheet, rawRows);
