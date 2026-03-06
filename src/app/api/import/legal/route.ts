@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { normalizeAddress } from "@/lib/building-matching";
+import { matchLegalCase, type LegalCaseRow, type TenantRecord, type MatchResult } from "@/lib/legal-matching";
 import { LegalStage } from "@prisma/client";
 
 const STAGE_MAP: Record<string, LegalStage> = {
@@ -40,6 +41,12 @@ function parseDate(v: any): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function numVal(v: any): number {
+  if (v == null || v === "") return 0;
+  const n = typeof v === "string" ? parseFloat(v.replace(/[$,]/g, "")) : Number(v);
+  return isNaN(n) ? 0 : n;
+}
+
 function col(row: any, ...keys: string[]): string {
   for (const k of keys) {
     if (row[k] !== undefined && row[k] !== null && row[k] !== "") return String(row[k]).trim();
@@ -47,9 +54,11 @@ function col(row: any, ...keys: string[]): string {
   return "";
 }
 
-export const POST = withAuth(async (req, { user }) => {
+export const POST = withAuth(async (req: NextRequest, { user }) => {
   const formData = await req.formData();
   const file = formData.get("file") as File;
+  const mode = new URL(req.url).searchParams.get("mode") || "import"; // preview | import
+
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -71,125 +80,208 @@ export const POST = withAuth(async (req, { user }) => {
     if (b.altAddress) addressToBuildingId.set(normalizeAddress(b.altAddress), b.id);
   }
 
-  const tenants = await prisma.tenant.findMany({
+  const dbTenants = await prisma.tenant.findMany({
     select: {
       id: true,
       name: true,
-      unit: { select: { unitNumber: true, buildingId: true } },
+      balance: true,
+      unit: { select: { unitNumber: true, buildingId: true, building: { select: { address: true } } } },
+    },
+  });
+
+  const tenantRecords: TenantRecord[] = dbTenants.map((t) => ({
+    id: t.id,
+    name: t.name,
+    unitNumber: t.unit.unitNumber,
+    buildingId: t.unit.buildingId,
+    buildingAddress: t.unit.building.address,
+    balance: Number(t.balance),
+  }));
+
+  // Parse each row into a LegalCaseRow
+  const legalRows: LegalCaseRow[] = rows.map((row, i) => ({
+    address: col(row, "Building Address", "Building", "Address", "Property", "Property Address"),
+    unit: col(row, "Unit", "Unit Number", "Apt", "Apt #", "Apt Number", "Unit #"),
+    tenantName: col(row, "Tenant Name", "Tenant", "Name", "Resident", "Respondent", "Defendant"),
+    caseNumber: col(row, "Case Number", "Case #", "Case No", "Docket", "Index Number", "Index #", "Index No"),
+    attorney: col(row, "Attorney", "Atty", "Lawyer", "Counsel"),
+    filingDate: parseDate(row["Date Filed"] || row["Filed Date"] || row["Filed"] || row["Filing Date"]),
+    courtDate: parseDate(row["Court Date"] || row["Next Court Date"] || row["Hearing Date"]),
+    legalStage: col(row, "Legal Stage", "Stage", "Case Type", "Type", "Proceeding Type"),
+    arrearsBalance: numVal(row["Arrears Balance"] || row["Balance"] || row["Amount Owed"] || row["Arrears"]),
+    notes: col(row, "Notes", "Note", "Comments", "Description"),
+    status: col(row, "Status", "Case Status"),
+    rowIndex: i,
+  }));
+
+  // Match each row
+  const matchResults: MatchResult[] = legalRows
+    .filter((r) => r.tenantName || r.address || r.unit)
+    .map((r) => matchLegalCase(r, tenantRecords, addressToBuildingId));
+
+  // Preview mode — return match results without importing
+  if (mode === "preview") {
+    const summary = {
+      total: matchResults.length,
+      exact: matchResults.filter((m) => m.matchType === "exact").length,
+      likely: matchResults.filter((m) => m.matchType === "likely").length,
+      needsReview: matchResults.filter((m) => m.matchType === "needs_review").length,
+      noMatch: matchResults.filter((m) => m.matchType === "no_match").length,
+    };
+
+    return NextResponse.json({
+      summary,
+      matches: matchResults.map((m) => ({
+        rowIndex: m.row.rowIndex,
+        sourceAddress: m.row.address,
+        sourceUnit: m.row.unit,
+        sourceTenantName: m.row.tenantName,
+        sourceCaseNumber: m.row.caseNumber,
+        sourceStage: m.row.legalStage,
+        sourceBalance: m.row.arrearsBalance,
+        matchType: m.matchType,
+        confidence: m.confidence,
+        matchedTenantId: m.tenant?.id || null,
+        matchedTenantName: m.tenant?.name || null,
+        matchedBuilding: m.tenant?.buildingAddress || null,
+        matchedUnit: m.tenant?.unitNumber || null,
+        reasons: m.reasons,
+      })),
+    });
+  }
+
+  // Import mode — create batch and process
+  const importBatch = await prisma.importBatch.create({
+    data: {
+      filename: file.name,
+      format: "legal-cases",
+      recordCount: 0,
+      status: "processing",
     },
   });
 
   let imported = 0;
   let skipped = 0;
+  let queued = 0;
   const errors: string[] = [];
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const rowNum = i + 2; // Excel row (1-indexed header + data)
+  for (const match of matchResults) {
+    const { row } = match;
+    const rowNum = row.rowIndex + 2;
 
-    const buildingAddr = col(row, "Building Address", "Building", "Address", "Property");
-    const unitNum = col(row, "Unit", "Unit Number", "Apt", "Apt #");
-    const tenantName = col(row, "Tenant Name", "Tenant", "Name", "Resident");
-    const caseNumber = col(row, "Case Number", "Case #", "Case No", "Docket");
-    const caseType = col(row, "Case Type", "Type");
-    const legalStage = col(row, "Legal Stage", "Stage", "Status");
-    const attorney = col(row, "Attorney", "Atty", "Lawyer");
-    const dateFiled = parseDate(row["Date Filed"] || row["Filed Date"] || row["Filed"]);
-    const notes = col(row, "Notes", "Note", "Comments");
-
-    if (!tenantName) {
-      errors.push(`Row ${rowNum}: Missing tenant name`);
-      skipped++;
-      continue;
-    }
-
-    // Find building
-    let buildingId: string | undefined;
-    if (buildingAddr) {
-      buildingId = addressToBuildingId.get(normalizeAddress(buildingAddr));
-    }
-
-    // Find tenant by name + unit + building
-    const normalizedTenantName = tenantName.toLowerCase();
-    const matchingTenants = tenants.filter((t) => {
-      const nameMatch = t.name.toLowerCase() === normalizedTenantName;
-      if (!nameMatch) return false;
-      if (buildingId && t.unit.buildingId !== buildingId) return false;
-      if (unitNum && t.unit.unitNumber !== unitNum) return false;
-      return true;
-    });
-
-    if (matchingTenants.length === 0) {
-      // Try fuzzy name match (contains)
-      const fuzzyMatches = tenants.filter((t) => {
-        const nameMatch = t.name.toLowerCase().includes(normalizedTenantName) ||
-          normalizedTenantName.includes(t.name.toLowerCase());
-        if (!nameMatch) return false;
-        if (buildingId && t.unit.buildingId !== buildingId) return false;
-        if (unitNum && t.unit.unitNumber !== unitNum) return false;
-        return true;
-      });
-
-      if (fuzzyMatches.length === 1) {
-        matchingTenants.push(fuzzyMatches[0]);
-      } else {
-        errors.push(`Row ${rowNum}: Tenant "${tenantName}" not found${buildingAddr ? ` at ${buildingAddr}` : ""}${unitNum ? ` #${unitNum}` : ""}`);
-        skipped++;
-        continue;
-      }
-    }
-
-    const tenant = matchingTenants[0];
-    const stage = parseStage(legalStage || caseType);
-
-    try {
-      const legalCase = await prisma.legalCase.upsert({
-        where: { tenantId: tenant.id },
-        create: {
-          tenantId: tenant.id,
-          inLegal: true,
-          stage,
-          caseNumber: caseNumber || null,
-          attorney: attorney || null,
-          filedDate: dateFiled,
-        },
-        update: {
-          inLegal: true,
-          stage,
-          ...(caseNumber ? { caseNumber } : {}),
-          ...(attorney ? { attorney } : {}),
-          ...(dateFiled ? { filedDate: dateFiled } : {}),
-        },
-      });
-
-      // Add note if provided
-      if (notes) {
-        await prisma.legalNote.create({
-          data: {
-            legalCaseId: legalCase.id,
-            authorId: user.id,
-            text: notes,
+    // Auto-import exact and likely matches
+    if ((match.matchType === "exact" || match.matchType === "likely") && match.tenant) {
+      const stage = parseStage(row.legalStage);
+      try {
+        await prisma.legalCase.upsert({
+          where: { tenantId: match.tenant.id },
+          create: {
+            tenantId: match.tenant.id,
+            inLegal: true,
             stage,
+            caseNumber: row.caseNumber || null,
+            attorney: row.attorney || null,
+            filedDate: row.filingDate,
+            courtDate: row.courtDate,
+            arrearsBalance: row.arrearsBalance || null,
+            status: row.status || "active",
+            importBatchId: importBatch.id,
+          },
+          update: {
+            inLegal: true,
+            stage,
+            ...(row.caseNumber ? { caseNumber: row.caseNumber } : {}),
+            ...(row.attorney ? { attorney: row.attorney } : {}),
+            ...(row.filingDate ? { filedDate: row.filingDate } : {}),
+            ...(row.courtDate ? { courtDate: row.courtDate } : {}),
+            ...(row.arrearsBalance ? { arrearsBalance: row.arrearsBalance } : {}),
+            ...(row.status ? { status: row.status } : {}),
+            importBatchId: importBatch.id,
           },
         });
-      }
 
-      imported++;
-    } catch (e: any) {
-      errors.push(`Row ${rowNum}: ${tenantName} — ${e.message}`);
-      skipped++;
+        // Add note if provided
+        if (row.notes) {
+          const legalCase = await prisma.legalCase.findUnique({ where: { tenantId: match.tenant.id } });
+          if (legalCase) {
+            await prisma.legalNote.create({
+              data: {
+                legalCaseId: legalCase.id,
+                authorId: user.id,
+                text: `[Import] ${row.notes}`,
+                stage,
+              },
+            });
+          }
+        }
+
+        await prisma.importRow.create({
+          data: {
+            importBatchId: importBatch.id,
+            rowIndex: row.rowIndex,
+            rawData: row as any,
+            status: match.matchType === "exact" ? "CREATED" : "UPDATED",
+            entityType: "legal_case",
+            entityId: match.tenant.id,
+          },
+        });
+
+        imported++;
+      } catch (e: any) {
+        errors.push(`Row ${rowNum}: ${row.tenantName} — ${e.message}`);
+        skipped++;
+      }
+    } else {
+      // Send to review queue
+      try {
+        await prisma.legalImportQueue.create({
+          data: {
+            importBatchId: importBatch.id,
+            rowIndex: row.rowIndex,
+            rawData: row as any,
+            matchType: match.matchType,
+            matchConfidence: match.confidence,
+            candidateTenantId: match.tenant?.id || null,
+            candidateTenantName: match.tenant?.name || null,
+            candidateBuildingAddress: match.tenant?.buildingAddress || null,
+            candidateUnitNumber: match.tenant?.unitNumber || null,
+            sourceAddress: row.address || null,
+            sourceUnit: row.unit || null,
+            sourceTenantName: row.tenantName || null,
+            sourceCaseNumber: row.caseNumber || null,
+            status: "pending",
+          },
+        });
+        queued++;
+      } catch (e: any) {
+        errors.push(`Row ${rowNum}: Failed to queue — ${e.message}`);
+        skipped++;
+      }
     }
   }
 
-  await prisma.importBatch.create({
+  // Update batch
+  await prisma.importBatch.update({
+    where: { id: importBatch.id },
     data: {
-      filename: file.name,
-      format: "legal-cases",
       recordCount: imported,
       status: errors.length > 0 ? "completed_with_errors" : "completed",
       errors: errors.length > 0 ? errors : undefined,
     },
   });
 
-  return NextResponse.json({ imported, skipped, errors, total: rows.length });
+  return NextResponse.json({
+    imported,
+    skipped,
+    queued,
+    errors,
+    total: matchResults.length,
+    batchId: importBatch.id,
+    summary: {
+      exact: matchResults.filter((m) => m.matchType === "exact").length,
+      likely: matchResults.filter((m) => m.matchType === "likely").length,
+      needsReview: matchResults.filter((m) => m.matchType === "needs_review").length,
+      noMatch: matchResults.filter((m) => m.matchType === "no_match").length,
+    },
+  });
 }, "upload");

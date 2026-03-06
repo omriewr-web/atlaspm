@@ -283,19 +283,48 @@ enum LegalStage {
 }
 
 model LegalCase {
-  id          String     @id @default(cuid())
-  tenantId    String     @unique
-  inLegal     Boolean    @default(true)
-  stage       LegalStage @default(NOTICE_SENT)
-  caseNumber  String?
-  attorney    String?
-  filedDate   DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  notes       LegalNote[]
+  id              String     @id @default(cuid())
+  tenantId        String     @unique
+  inLegal         Boolean    @default(true)
+  stage           LegalStage @default(NOTICE_SENT)
+  caseNumber      String?
+  attorney        String?
+  filedDate       DateTime?
+  courtDate       DateTime?
+  arrearsBalance  Decimal?   @db.Decimal(10, 2)
+  status          String     @default("active")  // active, settled, dismissed, withdrawn
+  importBatchId   String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  notes           LegalNote[]
   @@index([stage])
+  @@index([status])
   @@map("legal_cases")
+}
+
+model LegalImportQueue {
+  id              String   @id @default(cuid())
+  importBatchId   String
+  rowIndex        Int
+  rawData         Json
+  matchType       String   // exact, likely, needs_review, no_match
+  matchConfidence Decimal  @db.Decimal(3, 2)
+  candidateTenantId String?
+  candidateTenantName String?
+  candidateBuildingAddress String?
+  candidateUnitNumber String?
+  sourceAddress   String?
+  sourceUnit      String?
+  sourceTenantName String?
+  sourceCaseNumber String?
+  status          String   @default("pending")  // pending, approved, rejected, auto_matched
+  resolvedById    String?
+  resolvedAt      DateTime?
+  createdAt       DateTime @default(now())
+  @@index([importBatchId])
+  @@index([status])
+  @@map("legal_import_queue")
 }
 
 model LegalNote {
