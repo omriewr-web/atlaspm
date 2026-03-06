@@ -159,6 +159,7 @@ model Unit {
   vacancyInfo VacancyInfo?
   workOrders  WorkOrder[]
   maintenanceSchedules MaintenanceSchedule[]
+  leases      Lease[]
   @@unique([buildingId, unitNumber])
   @@map("units")
 }
@@ -198,6 +199,8 @@ model Tenant {
   tasks           Task[]
   emails          EmailLog[]
   workOrders      WorkOrder[]
+  leases          Lease[]
+  balanceSnapshots BalanceSnapshot[]
   @@index([balance])
   @@index([arrearsCategory])
   @@index([leaseExpiration])
@@ -635,4 +638,162 @@ model ViolationSyncLog {
   building     Building? @relation(fields: [buildingId], references: [id])
   @@index([buildingId, syncedAt(sort: Desc)])
   @@map("violation_sync_logs")
+}
+
+// ── Phase 1: Normalized Domain Models ──────────────────────────────
+
+enum LeaseStatus {
+  ACTIVE
+  EXPIRED
+  MONTH_TO_MONTH
+  RENEWED
+  TERMINATED
+  PENDING
+}
+
+enum OccupancyStatus {
+  OCCUPIED
+  VACANT
+  NOTICE_GIVEN
+  EVICTION_IN_PROGRESS
+}
+
+enum OccupantRole {
+  PRIMARY
+  SPOUSE
+  DEPENDENT
+  ROOMMATE
+  GUARANTOR
+  AUTHORIZED_REP
+}
+
+enum PaymentFrequency {
+  MONTHLY
+  WEEKLY
+  BIWEEKLY
+}
+
+enum BillingStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum ImportType {
+  RENT_ROLL
+  AGING
+  BUILDING
+  DHCR
+  TENANT_MASTER
+}
+
+enum ImportRowStatus {
+  MATCHED
+  CREATED
+  UPDATED
+  SKIPPED
+  ERROR
+}
+
+model Lease {
+  id                String          @id @default(cuid())
+  unitId            String
+  tenantId          String?
+  leaseStart        DateTime?
+  leaseEnd          DateTime?
+  monthlyRent       Decimal         @default(0) @db.Decimal(10, 2)
+  legalRent         Decimal         @default(0) @db.Decimal(10, 2)
+  preferentialRent  Decimal         @default(0) @db.Decimal(10, 2)
+  subsidyType       String?
+  subsidyAmount     Decimal         @default(0) @db.Decimal(10, 2)
+  tenantPortion     Decimal         @default(0) @db.Decimal(10, 2)
+  renewalStatus     String?
+  leaseType         String?
+  status            LeaseStatus     @default(ACTIVE)
+  paymentFrequency  PaymentFrequency @default(MONTHLY)
+  billingStatus     BillingStatus   @default(ACTIVE)
+  isStabilized      Boolean         @default(false)
+  householdSize     Int?
+  securityDeposit   Decimal         @default(0) @db.Decimal(10, 2)
+  notes             String?         @db.Text
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  unit              Unit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant            Tenant?         @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  occupants         LeaseOccupant[]
+  recurringCharges  RecurringCharge[]
+  balanceSnapshots  BalanceSnapshot[]
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([leaseEnd])
+  @@map("leases")
+}
+
+model LeaseOccupant {
+  id        String       @id @default(cuid())
+  leaseId   String
+  name      String
+  role      OccupantRole @default(PRIMARY)
+  isPrimary Boolean      @default(false)
+  phone     String?
+  email     String?
+  createdAt DateTime     @default(now())
+  lease     Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  @@index([leaseId])
+  @@map("lease_occupants")
+}
+
+model RecurringCharge {
+  id          String   @id @default(cuid())
+  leaseId     String
+  chargeCode  String
+  description String?
+  amount      Decimal  @db.Decimal(10, 2)
+  frequency   PaymentFrequency @default(MONTHLY)
+  startDate   DateTime?
+  endDate     DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lease       Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  @@index([leaseId])
+  @@index([active])
+  @@map("recurring_charges")
+}
+
+model BalanceSnapshot {
+  id                String   @id @default(cuid())
+  tenantId          String?
+  leaseId           String?
+  importBatchId     String?
+  snapshotDate      DateTime @default(now())
+  currentCharges    Decimal  @default(0) @db.Decimal(10, 2)
+  currentBalance    Decimal  @default(0) @db.Decimal(10, 2)
+  pastDueBalance    Decimal  @default(0) @db.Decimal(10, 2)
+  lastPaymentDate   DateTime?
+  lastPaymentAmount Decimal? @db.Decimal(10, 2)
+  arrearsStatus     String   @default("current")
+  createdAt         DateTime @default(now())
+  tenant            Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  lease             Lease?   @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  @@index([tenantId, snapshotDate(sort: Desc)])
+  @@index([leaseId])
+  @@index([snapshotDate])
+  @@map("balance_snapshots")
+}
+
+model ImportRow {
+  id            String         @id @default(cuid())
+  importBatchId String
+  rowIndex      Int
+  rawData       Json
+  status        ImportRowStatus @default(MATCHED)
+  entityType    String?
+  entityId      String?
+  errors        Json?
+  createdAt     DateTime       @default(now())
+  @@index([importBatchId])
+  @@index([status])
+  @@map("import_rows")
 }

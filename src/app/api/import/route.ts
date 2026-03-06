@@ -109,19 +109,61 @@ export const POST = withAuth(async (req, { user }) => {
         collectionScore,
       };
 
+      let tenant;
       if (t.residentId) {
-        await prisma.tenant.upsert({
+        tenant = await prisma.tenant.upsert({
           where: { yardiResidentId: t.residentId },
           create: { unitId: unit.id, yardiResidentId: t.residentId, ...tenantData },
           update: tenantData,
         });
       } else {
-        await prisma.tenant.upsert({
+        tenant = await prisma.tenant.upsert({
           where: { unitId: unit.id },
           create: { unitId: unit.id, ...tenantData },
           update: tenantData,
         });
       }
+
+      // ── Phase 1 dual-write: Lease + BalanceSnapshot ──
+      const normalizedLeaseStatus = leaseExp
+        ? (leaseExp < new Date() ? "EXPIRED" : "ACTIVE")
+        : "MONTH_TO_MONTH";
+
+      await prisma.lease.upsert({
+        where: { id: `${tenant.id}-lease` },
+        create: {
+          id: `${tenant.id}-lease`,
+          unitId: unit.id,
+          tenantId: tenant.id,
+          leaseStart: t.moveIn ? new Date(t.moveIn) : null,
+          leaseEnd: leaseExp,
+          monthlyRent: t.marketRent,
+          legalRent: 0,
+          preferentialRent: 0,
+          securityDeposit: t.deposit,
+          status: normalizedLeaseStatus as any,
+          isStabilized: false,
+        },
+        update: {
+          leaseStart: t.moveIn ? new Date(t.moveIn) : null,
+          leaseEnd: leaseExp,
+          monthlyRent: t.marketRent,
+          securityDeposit: t.deposit,
+          status: normalizedLeaseStatus as any,
+        },
+      });
+
+      await prisma.balanceSnapshot.create({
+        data: {
+          tenantId: tenant.id,
+          leaseId: `${tenant.id}-lease`,
+          snapshotDate: new Date(),
+          currentCharges: t.marketRent,
+          currentBalance: t.balance,
+          pastDueBalance: t.balance > 0 ? t.balance : 0,
+          arrearsStatus: arrearsCategory,
+        },
+      });
 
       imported++;
     } catch (e: any) {
