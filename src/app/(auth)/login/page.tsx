@@ -37,13 +37,16 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-sm">
-      <div className="flex justify-center mb-6">
-        <img src="/images/atlaspm-logo.jpg" alt="AtlasPM" style={{ height: '80px', width: 'auto' }} />
+      <div className="flex flex-col items-center mb-8">
+        <img
+          src="/images/atlaspm-logo.jpg"
+          alt="AtlasPM"
+          className="rounded-xl"
+          style={{ height: '120px', width: 'auto', filter: 'drop-shadow(0 0 24px rgba(201, 168, 76, 0.3))' }}
+        />
+        <p className="text-text-muted text-sm mt-3 tracking-widest uppercase">Property Management</p>
       </div>
       <div className="bg-card border border-border rounded-xl p-8">
-        <div className="text-center mb-8">
-          <p className="text-text-muted text-sm">Property Management</p>
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (

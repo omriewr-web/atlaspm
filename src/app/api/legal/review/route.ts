@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { LegalStage } from "@prisma/client";
+import { assertTenantAccess } from "@/lib/data-scope";
 
 const STAGE_MAP: Record<string, LegalStage> = {
   "notice sent": "NOTICE_SENT", "notice": "NOTICE_SENT",
@@ -58,6 +59,9 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
   if (!targetTenantId) {
     return NextResponse.json({ error: "tenantId required to approve" }, { status: 400 });
   }
+
+  const forbidden = await assertTenantAccess(user, targetTenantId);
+  if (forbidden) return forbidden;
 
   const rawData = item.rawData as any;
   const stage = parseStage(rawData.legalStage);

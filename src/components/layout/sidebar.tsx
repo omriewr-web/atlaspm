@@ -76,13 +76,13 @@ export default function Sidebar() {
     >
       <div className="p-3 border-b border-border overflow-hidden">
         {sidebarCollapsed ? (
-          <div className="flex justify-center">
-            <img src="/images/atlaspm-logo.jpg" alt="AtlasPM" style={{ height: '32px', width: 'auto' }} />
+          <div className="flex justify-center py-1">
+            <img src="/images/atlaspm-logo.jpg" alt="AtlasPM" className="rounded" style={{ height: '40px', width: 'auto' }} />
           </div>
         ) : (
           <>
             <div className="flex items-center gap-2 mb-2">
-              <img src="/images/atlaspm-logo.jpg" alt="AtlasPM" style={{ height: '44px', width: 'auto' }} />
+              <img src="/images/atlaspm-logo.jpg" alt="AtlasPM" className="rounded-md" style={{ height: '56px', width: 'auto' }} />
             </div>
             <PropertySelector />
           </>

@@ -236,6 +236,11 @@ export function mapHpdViolation(row: any, buildingId: string) {
       novDescription: row.novdescription || null,
     },
     update: {
+      class: mapHpdClass(row.class),
+      severity: hpdSeverity(row.class),
+      description: row.novdescription || row.violationstatus || "HPD Violation",
+      unitNumber: row.apartment || null,
+      respondByDate: parseDate(row.currentstatusdate),
       currentStatus: row.violationstatus || row.currentstatus || null,
       penaltyAmount: parseDecimal(row.penalityamount),
       certifiedDismissDate: parseDate(row.certifieddate),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
-import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getTenantScope, getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { PortfolioMetrics } from "@/types";
 
 export const GET = withAuth(async (req, { user }) => {
@@ -37,12 +37,9 @@ export const GET = withAuth(async (req, { user }) => {
     },
   });
 
-  // Unit count — derive scope from user (already checked EMPTY_SCOPE)
-  const unitWhere: any = buildingId
-    ? { buildingId }
-    : user.role === "ADMIN"
-      ? {}
-      : { buildingId: { in: user.assignedProperties } };
+  // Unit count — use centralized scope helper (EMPTY_SCOPE already handled above)
+  const unitScope = getBuildingScope(user, buildingId);
+  const unitWhere: any = unitScope === EMPTY_SCOPE ? { buildingId: "__none__" } : { ...unitScope };
   if (portfolio) {
     unitWhere.building = { ...unitWhere.building, portfolio };
   }

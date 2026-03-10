@@ -376,53 +376,78 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     importRunId = importRun.id;
   } catch { /* non-blocking */ }
 
-  // Use shared commit handler
-  const { imported, skipped, errors } = await commitRentRollImport(rows, {
-    importBatchId: importBatch.id,
-    userId: user.id,
-  });
-
-  await prisma.importBatch.update({
-    where: { id: importBatch.id },
-    data: {
-      recordCount: imported,
-      status: errors.length > 0 ? "completed_with_errors" : "completed",
-      errors: errors.length > 0 ? errors : undefined,
-    },
-  });
-
-  if (importRunId) {
-    try {
-      await prisma.importRun.update({
-        where: { id: importRunId },
-        data: { status: errors.length > 0 ? "completed_with_errors" : "completed" },
-      });
-    } catch { /* non-blocking */ }
-  }
-
-  // Save import profile
+  let imported = 0;
+  let skipped = 0;
+  let errors: string[] = [];
   let profileSaved = false;
-  if (imported > 0) {
-    try {
-      const parsed = parseImportFile(buffer, file.name);
-      const sheetData = parsed.sheets[0];
-      if (sheetData) {
-        const structure = analyzeStructure(sheetData);
-        const fingerprint = buildFingerprint(sheetData, structure);
-        const profileMapping = mapping.map((m) => ({
-          columnIndex: m.columnIndex, sourceHeader: m.sourceHeader,
-          normalizedHeader: m.sourceHeader.toLowerCase().trim(),
-          mappedField: m.mappedField, confidence: m.confidence,
-          reason: "Confirmed by user", method: (m.method ?? "alias") as any,
-        }));
-        await saveImportProfile({
-          organizationId: user.organizationId, name: `${file.name} (auto-saved)`,
-          importType: fileType ?? "tenant_list", sheetNamePattern: sheetData.sheetName,
-          headerRowCount: structure.headerRows.length, fingerprint, mapping: profileMapping,
+
+  try {
+    // Use shared commit handler
+    const result = await commitRentRollImport(rows, {
+      importBatchId: importBatch.id,
+      userId: user.id,
+    });
+    imported = result.imported;
+    skipped = result.skipped;
+    errors = result.errors;
+
+    await prisma.importBatch.update({
+      where: { id: importBatch.id },
+      data: {
+        recordCount: imported,
+        status: errors.length > 0 ? "completed_with_errors" : "completed",
+        errors: errors.length > 0 ? errors : undefined,
+      },
+    });
+
+    if (importRunId) {
+      try {
+        await prisma.importRun.update({
+          where: { id: importRunId },
+          data: { status: errors.length > 0 ? "completed_with_errors" : "completed" },
         });
-        profileSaved = true;
-      }
-    } catch { /* non-blocking */ }
+      } catch { /* non-blocking */ }
+    }
+
+    // Save import profile
+    if (imported > 0) {
+      try {
+        const parsed = parseImportFile(buffer, file.name);
+        const sheetData = parsed.sheets[0];
+        if (sheetData) {
+          const structure = analyzeStructure(sheetData);
+          const fingerprint = buildFingerprint(sheetData, structure);
+          const profileMapping = mapping.map((m) => ({
+            columnIndex: m.columnIndex, sourceHeader: m.sourceHeader,
+            normalizedHeader: m.sourceHeader.toLowerCase().trim(),
+            mappedField: m.mappedField, confidence: m.confidence,
+            reason: "Confirmed by user", method: (m.method ?? "alias") as any,
+          }));
+          await saveImportProfile({
+            organizationId: user.organizationId, name: `${file.name} (auto-saved)`,
+            importType: fileType ?? "tenant_list", sheetNamePattern: sheetData.sheetName,
+            headerRowCount: structure.headerRows.length, fingerprint, mapping: profileMapping,
+          });
+          profileSaved = true;
+        }
+      } catch { /* non-blocking */ }
+    }
+  } catch (err) {
+    await prisma.importBatch.update({
+      where: { id: importBatch.id },
+      data: { status: "failed", errors: [err instanceof Error ? err.message : "Unknown error"] },
+    });
+
+    if (importRunId) {
+      try {
+        await prisma.importRun.update({
+          where: { id: importRunId },
+          data: { status: "failed" },
+        });
+      } catch { /* non-blocking */ }
+    }
+
+    return NextResponse.json({ error: "Import failed", detail: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 
   return NextResponse.json({

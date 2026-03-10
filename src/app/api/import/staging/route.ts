@@ -57,28 +57,50 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
   });
 
   const rows = batch.rowsJson as any[];
-  const { imported, skipped, errors } = await commitRentRollImport(rows, {
-    importBatchId: importBatch.id,
-    userId: user.id,
-  });
 
-  await prisma.importBatch.update({
-    where: { id: importBatch.id },
-    data: {
-      recordCount: imported,
-      status: errors.length > 0 ? "completed_with_errors" : "completed",
-      errors: errors.length > 0 ? errors : undefined,
-    },
-  });
+  let imported = 0;
+  let skipped = 0;
+  let errors: string[] = [];
 
-  await prisma.importStagingBatch.update({
-    where: { id },
-    data: {
-      status: "approved", reviewedById: user.id,
-      reviewedAt: new Date(), reviewNotes: notes,
+  try {
+    const result = await commitRentRollImport(rows, {
       importBatchId: importBatch.id,
-    },
-  });
+      userId: user.id,
+    });
+    imported = result.imported;
+    skipped = result.skipped;
+    errors = result.errors;
+
+    await prisma.importBatch.update({
+      where: { id: importBatch.id },
+      data: {
+        recordCount: imported,
+        status: errors.length > 0 ? "completed_with_errors" : "completed",
+        errors: errors.length > 0 ? errors : undefined,
+      },
+    });
+
+    await prisma.importStagingBatch.update({
+      where: { id },
+      data: {
+        status: "approved", reviewedById: user.id,
+        reviewedAt: new Date(), reviewNotes: notes,
+        importBatchId: importBatch.id,
+      },
+    });
+  } catch (err) {
+    await prisma.importBatch.update({
+      where: { id: importBatch.id },
+      data: { status: "failed", errors: [err instanceof Error ? err.message : "Unknown error"] },
+    });
+
+    await prisma.importStagingBatch.update({
+      where: { id },
+      data: { status: "failed", reviewedById: user.id, reviewedAt: new Date(), reviewNotes: notes },
+    });
+
+    return NextResponse.json({ error: "Import failed", detail: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
+  }
 
   return NextResponse.json({
     success: true, status: "approved",

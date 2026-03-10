@@ -98,6 +98,27 @@ export async function syncBuildingViolations(
         if (existing) {
           await prisma.violation.update({ where: { id: existing.id }, data: mapped.update });
           updatedCount++;
+
+          // Auto-create work order if violation is now Class C / Immediately Hazardous and has no linked WO
+          if (
+            !existing.linkedWorkOrderId &&
+            (mapped.update.class === "C" || mapped.update.severity === "IMMEDIATELY_HAZARDOUS")
+          ) {
+            const wo = await prisma.workOrder.create({
+              data: {
+                title: `[AUTO] ${source} Violation - ${existing.externalId}`,
+                description: `Auto-created from ${source} violation upgrade.\n\n${mapped.update.description || existing.novDescription || ""}`,
+                status: "OPEN",
+                priority: "URGENT",
+                category: "GENERAL",
+                buildingId,
+              },
+            });
+            await prisma.violation.update({
+              where: { id: existing.id },
+              data: { linkedWorkOrderId: wo.id },
+            });
+          }
         } else {
           const created = await prisma.violation.create({ data: mapped.create });
           newCount++;

@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx next:*)",
+      "Bash(npx prisma:*)",
+      "Bash(ls:*)",
+      "Bash(npm run:*)",
+      "Bash(openssl rand:*)",
+      "Bash(node:*)",
+      "Bash(npm ls:*)",
+      "Bash(rm:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(mv:*)",
+      "Bash(find:*)",
+      "Bash(npx tsc:*)",
+      "Bash(taskkill:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "WebSearch",
+      "WebFetch(domain:www.nyc.gov)",
+      "Bash(grep:*)",
+      "Bash(tasklist:*)",
+      "Bash(python3:*)",
+      "Bash(mkdir:*)",
+      "Bash(echo EXIT:$?:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(echo:*)",
+      "Bash(\"C:/Users/omrid/Documents/icertracker/README.md\":*)",
+      "Bash(\"C:/Users/omrid/Documents/icertracker/CLAUDE.md\":*)"
+    ]
+  }
+}

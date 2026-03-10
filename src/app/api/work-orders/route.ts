@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { workOrderCreateSchema } from "@/lib/validations";
-import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
 import { getDisplayAddress } from "@/lib/building-matching";
 import { WorkOrderView } from "@/types";
 
@@ -73,6 +73,9 @@ export const GET = withAuth(async (req, { user }) => {
 
 export const POST = withAuth(async (req, { user }) => {
   const data = await parseBody(req, workOrderCreateSchema);
+
+  const forbidden = await assertBuildingAccess(user, data.buildingId);
+  if (forbidden) return forbidden;
 
   const wo = await prisma.workOrder.create({
     data: {

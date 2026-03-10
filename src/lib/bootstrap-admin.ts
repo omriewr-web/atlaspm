@@ -6,10 +6,16 @@ export async function bootstrapAdmin() {
   const username = process.env.BOOTSTRAP_ADMIN_USERNAME;
   const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
 
-  if (!email || !username || !password) return;
+  if (!email || !username || !password) {
+    console.log("[bootstrap] Missing BOOTSTRAP_ADMIN_EMAIL, BOOTSTRAP_ADMIN_USERNAME, or BOOTSTRAP_ADMIN_PASSWORD env vars. Skipping.");
+    return;
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return;
+  if (existing) {
+    console.log(`[bootstrap] Admin user "${email}" already exists. Skipping.`);
+    return;
+  }
 
   const hash = await bcrypt.hash(password, 12);
   await prisma.user.create({
@@ -22,4 +28,15 @@ export async function bootstrapAdmin() {
       active: true,
     },
   });
+  console.log(`[bootstrap] Admin user "${username}" created successfully.`);
+}
+
+// Run as standalone script: npx tsx src/lib/bootstrap-admin.ts
+if (require.main === module) {
+  bootstrapAdmin()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error("[bootstrap] Failed:", err);
+      process.exit(1);
+    });
 }

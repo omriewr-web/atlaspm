@@ -174,21 +174,37 @@ export const POST = withAuth(async (req, { user }) => {
     data: { filename: file.name, format: result.format, recordCount: 0, status: "processing" },
   });
 
-  // Convert to commit format and use shared handler
-  const commitRows = toCommitRows(tenants, parseErrors);
-  const { imported, skipped, errors } = await commitRentRollImport(commitRows, {
-    importBatchId: importBatch.id,
-    userId: user.id,
-  });
+  let imported = 0;
+  let skipped = 0;
+  let errors: string[] = [];
 
-  await prisma.importBatch.update({
-    where: { id: importBatch.id },
-    data: {
-      recordCount: imported,
-      status: errors.length > 0 ? "completed_with_errors" : "completed",
-      errors: errors.length > 0 ? errors : undefined,
-    },
-  });
+  try {
+    // Convert to commit format and use shared handler
+    const commitRows = toCommitRows(tenants, parseErrors);
+    const commitResult = await commitRentRollImport(commitRows, {
+      importBatchId: importBatch.id,
+      userId: user.id,
+    });
+    imported = commitResult.imported;
+    skipped = commitResult.skipped;
+    errors = commitResult.errors;
+
+    await prisma.importBatch.update({
+      where: { id: importBatch.id },
+      data: {
+        recordCount: imported,
+        status: errors.length > 0 ? "completed_with_errors" : "completed",
+        errors: errors.length > 0 ? errors : undefined,
+      },
+    });
+  } catch (err) {
+    await prisma.importBatch.update({
+      where: { id: importBatch.id },
+      data: { status: "failed", errors: [err instanceof Error ? err.message : "Unknown error"] },
+    });
+
+    return NextResponse.json({ error: "Import failed", detail: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
+  }
 
   return NextResponse.json({
     imported, skipped, errors,
