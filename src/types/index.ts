@@ -1,6 +1,6 @@
 // AtlasPM - Shared TypeScript Types
 
-export type UserRole = "ADMIN" | "PM" | "COLLECTOR" | "OWNER" | "BROKER";
+export type UserRole = "ADMIN" | "PM" | "COLLECTOR" | "OWNER" | "BROKER" | "LEASING_AGENT";
 
 export interface UserSession {
   id: string;
@@ -185,7 +185,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Record<string, boolean>> = {
   PM:        { allProps: false, dash: true, notes: true, pay: true, legal: true, upload: true, users: false, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true, collections: true, utilities: true, owner: false },
   COLLECTOR: { allProps: false, dash: true, notes: true, pay: true, legal: false, upload: false, users: false, vac: false, lease: false, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true, collections: true, utilities: true, owner: false },
   OWNER:     { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: true, reports: true, edit: false, email: false, maintenance: false, compliance: false, collections: false, utilities: false, owner: true },
-  BROKER:    { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: false, email: false, maintenance: false, compliance: false, collections: false, utilities: false, owner: false },
+  BROKER:        { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: false, email: false, maintenance: false, compliance: false, collections: false, utilities: false, owner: false },
+  LEASING_AGENT: { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: true, email: false, maintenance: false, compliance: false, collections: false, utilities: false, owner: false },
 };
 
 export function hasPermission(role: UserRole, perm: string): boolean {
@@ -194,7 +195,7 @@ export function hasPermission(role: UserRole, perm: string): boolean {
 
 // ── Work Order Types ─────────────────────────────────────────────
 
-export type WorkOrderStatus = "OPEN" | "IN_PROGRESS" | "ON_HOLD" | "COMPLETED";
+export type WorkOrderStatus = "PENDING_REVIEW" | "OPEN" | "IN_PROGRESS" | "ON_HOLD" | "COMPLETED";
 export type WorkOrderPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 export type WorkOrderCategory = "PLUMBING" | "ELECTRICAL" | "HVAC" | "APPLIANCE" | "GENERAL" | "OTHER";
 
@@ -379,6 +380,26 @@ export interface OwnerDashboardDTO {
     totalBalance: number;
     byStage: Record<string, number>;
   };
+  renewals: {
+    tenantId: string;
+    tenantName: string;
+    buildingAddress: string;
+    unitNumber: string;
+    leaseExpiration: string;
+    daysUntilExpiry: number;
+    currentRent: number;
+    askingRent: number | null;
+  }[];
+  vacancyPipeline: {
+    unitId: string;
+    buildingAddress: string;
+    unitNumber: string;
+    askingRent: number | null;
+    daysVacant: number;
+    recentActivityCount: number;
+    lastActivityDate: string | null;
+    lastActivityType: string | null;
+  }[];
   buildings: {
     id: string;
     address: string;

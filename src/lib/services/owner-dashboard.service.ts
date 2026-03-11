@@ -25,6 +25,8 @@ export async function getOwnerDashboard(user: ScopeUser): Promise<OwnerDashboard
     legalCases,
     buildings,
     priorSnapshots,
+    renewalTenants,
+    vacancyUnitsRaw,
   ] = await Promise.all([
     // All residential units
     prisma.unit.findMany({
@@ -109,6 +111,55 @@ export async function getOwnerDashboard(user: ScopeUser): Promise<OwnerDashboard
 
     // Prior month AR snapshots for trend
     getPriorMonthArrears(user),
+
+    // Upcoming renewals (90 days)
+    (() => {
+      const ninetyDays = new Date();
+      ninetyDays.setDate(ninetyDays.getDate() + 90);
+      return prisma.tenant.findMany({
+        where: {
+          ...(tenantScope as object),
+          leaseExpiration: { gte: new Date(), lte: ninetyDays },
+          moveOutDate: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          actualRent: true,
+          marketRent: true,
+          leaseExpiration: true,
+          unit: {
+            select: {
+              unitNumber: true,
+              askingRent: true,
+              building: { select: { address: true } },
+            },
+          },
+        },
+        orderBy: { leaseExpiration: "asc" },
+      });
+    })(),
+
+    // Vacant units with leasing activity
+    prisma.unit.findMany({
+      where: { ...(buildingScope as object), isVacant: true, isResidential: true },
+      select: {
+        id: true,
+        unitNumber: true,
+        askingRent: true,
+        building: { select: { address: true } },
+        vacancies: {
+          where: { isActive: true },
+          select: { createdAt: true },
+          take: 1,
+        },
+        leasingActivities: {
+          select: { createdAt: true, type: true },
+          orderBy: { createdAt: "desc" },
+          take: 30,
+        },
+      },
+    }),
   ]);
 
   const now = new Date();
@@ -129,7 +180,8 @@ export async function getOwnerDashboard(user: ScopeUser): Promise<OwnerDashboard
   let arrearsTrend: "improving" | "worsening" | "flat" | null = null;
   if (priorSnapshots !== null) {
     const diff = totalArrears - priorSnapshots;
-    if (Math.abs(diff) < totalArrears * 0.02) arrearsTrend = "flat";
+    const threshold = Math.max(totalArrears, priorSnapshots) * 0.02;
+    if (Math.abs(diff) < threshold) arrearsTrend = "flat";
     else if (diff < 0) arrearsTrend = "improving";
     else arrearsTrend = "worsening";
   }
@@ -210,6 +262,38 @@ export async function getOwnerDashboard(user: ScopeUser): Promise<OwnerDashboard
     };
   }).sort((a, b) => b.arrears - a.arrears);
 
+  // ── Upcoming Renewals ──────────────────────────────────────
+  const renewals = renewalTenants.map((t) => {
+    const daysUntilExpiry = Math.ceil((t.leaseExpiration!.getTime() - now.getTime()) / 86400000);
+    return {
+      tenantId: t.id,
+      tenantName: t.name,
+      buildingAddress: t.unit.building.address,
+      unitNumber: t.unit.unitNumber,
+      leaseExpiration: t.leaseExpiration!.toISOString(),
+      daysUntilExpiry,
+      currentRent: Number(t.actualRent || t.marketRent),
+      askingRent: t.unit.askingRent ? Number(t.unit.askingRent) : null,
+    };
+  });
+
+  // ── Vacancy Pipeline ─────────────────────────────────────
+  const vacancyPipeline = vacancyUnitsRaw.map((u) => {
+    const vacancyStart = u.vacancies[0]?.createdAt;
+    const daysVacant = vacancyStart ? Math.ceil((now.getTime() - vacancyStart.getTime()) / 86400000) : 0;
+    const lastAct = u.leasingActivities[0];
+    return {
+      unitId: u.id,
+      buildingAddress: u.building.address,
+      unitNumber: u.unitNumber,
+      askingRent: u.askingRent ? Number(u.askingRent) : null,
+      daysVacant,
+      recentActivityCount: u.leasingActivities.length,
+      lastActivityDate: lastAct?.createdAt.toISOString() ?? null,
+      lastActivityType: lastAct?.type ?? null,
+    };
+  }).sort((a, b) => b.daysVacant - a.daysVacant);
+
   return {
     generatedAt: now.toISOString(),
     portfolio: {
@@ -219,7 +303,9 @@ export async function getOwnerDashboard(user: ScopeUser): Promise<OwnerDashboard
       occupancyRate: Math.round(occupancyRate * 10) / 10,
       totalMonthlyRent: Math.round(totalMonthlyRent * 100) / 100,
       totalArrears: Math.round(totalArrears * 100) / 100,
-      collectionRate: null, // No billed/collected month logic exists yet
+      collectionRate: totalMonthlyRent > 0
+        ? Math.round(((totalMonthlyRent - totalArrears) / totalMonthlyRent) * 1000) / 10
+        : null,
       arrearsTrend,
       priorMonthArrears: priorSnapshots !== null ? Math.round(priorSnapshots * 100) / 100 : null,
     },
@@ -243,6 +329,8 @@ export async function getOwnerDashboard(user: ScopeUser): Promise<OwnerDashboard
       totalBalance: Math.round(legalBalance * 100) / 100,
       byStage,
     },
+    renewals,
+    vacancyPipeline,
     buildings: buildingRows,
   };
 }
@@ -287,6 +375,8 @@ function emptyDashboard(): OwnerDashboardDTO {
     vacancies: { count: 0, rate: 0, estimatedLostRent: 0, units: [] },
     violations: { totalOpen: 0, classA: 0, classB: 0, classC: 0, pastCureDate: 0, topBuildings: [] },
     legal: { totalActive: 0, totalBalance: 0, byStage: {} },
+    renewals: [],
+    vacancyPipeline: [],
     buildings: [],
   };
 }

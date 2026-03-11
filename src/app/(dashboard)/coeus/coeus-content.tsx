@@ -81,7 +81,7 @@ function timeAgo(date: string): string {
 }
 
 function getEntityLink(signal: Signal): string {
-  if (signal.tenantId) return `/collections/${signal.tenantId}`;
+  if (signal.tenantId) return `/collections`;
   if (signal.entityType === "building" && signal.buildingId) return `/compliance`;
   if (signal.entityType === "workorder") return `/maintenance`;
   if (signal.entityType === "violation" || signal.entityType === "complaint") return `/compliance`;

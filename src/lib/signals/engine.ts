@@ -60,6 +60,9 @@ export async function runSignalScan(
       detectCollectionsNoRecentNote(),
       detectCollectionsLegalCandidateNoCase(),
       detectCollectionsPaymentPlanOverdue(),
+      detectLeaseExpiringNoAskingRent(),
+      detectVacancyNoLeasingActivity(),
+      detectLeaseExpiringSoonNoRenewal(),
     ]);
 
     // Collect all detected signals
@@ -1870,6 +1873,155 @@ async function detectCollectionsPaymentPlanOverdue(): Promise<DetectedSignal[]> 
         recommendedAction: "Payment plan tenant shows no balance reduction in 30 days. Review plan status.",
       });
     }
+  }
+
+  return signals;
+}
+
+// ── Detection: Lease Expiring — No Asking Rent Set ─────────────
+
+async function detectLeaseExpiringNoAskingRent(): Promise<DetectedSignal[]> {
+  const signals: DetectedSignal[] = [];
+  const sixtyDays = new Date();
+  sixtyDays.setDate(sixtyDays.getDate() + 60);
+
+  const tenants = await prisma.tenant.findMany({
+    where: {
+      leaseExpiration: { gte: new Date(), lte: sixtyDays },
+      moveOutDate: null,
+      unit: { askingRent: null },
+    },
+    select: {
+      id: true,
+      name: true,
+      leaseExpiration: true,
+      unit: {
+        select: {
+          id: true,
+          unitNumber: true,
+          buildingId: true,
+          building: { select: { address: true } },
+        },
+      },
+    },
+  });
+
+  for (const t of tenants) {
+    const daysUntil = Math.ceil((t.leaseExpiration!.getTime() - Date.now()) / 86400000);
+    signals.push({
+      deduplicationKey: `lease-expiring-no-asking-${t.unit.id}`,
+      type: "leasing_risk",
+      severity: daysUntil <= 30 ? "high" : "medium",
+      title: `Lease expiring in ${daysUntil} days — no asking rent set`,
+      description: `${t.name} at ${t.unit.building.address} #${t.unit.unitNumber}. Set asking rent to prepare for potential vacancy.`,
+      entityType: "unit",
+      entityId: t.unit.id,
+      buildingId: t.unit.buildingId,
+      tenantId: t.id,
+      recommendedAction: "Set asking rent on this unit to prepare for potential turnover.",
+    });
+  }
+
+  return signals;
+}
+
+// ── Detection: Vacant Unit — No Leasing Activity ───────────────
+
+async function detectVacancyNoLeasingActivity(): Promise<DetectedSignal[]> {
+  const signals: DetectedSignal[] = [];
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  const vacantUnits = await prisma.unit.findMany({
+    where: {
+      isVacant: true,
+      isResidential: true,
+      leasingActivities: { none: { createdAt: { gte: fourteenDaysAgo } } },
+    },
+    select: {
+      id: true,
+      unitNumber: true,
+      buildingId: true,
+      building: { select: { address: true } },
+      vacancies: {
+        where: { isActive: true },
+        select: { createdAt: true },
+        take: 1,
+      },
+    },
+  });
+
+  for (const u of vacantUnits) {
+    const vacancyStart = u.vacancies[0]?.createdAt;
+    const daysVacant = vacancyStart ? Math.ceil((Date.now() - vacancyStart.getTime()) / 86400000) : 0;
+
+    signals.push({
+      deduplicationKey: `vacancy-no-activity-${u.id}`,
+      type: "leasing_risk",
+      severity: daysVacant >= 30 ? "high" : "medium",
+      title: `Vacant ${daysVacant} days — no recent leasing activity`,
+      description: `${u.building.address} #${u.unitNumber} has had no leasing activity in the past 14 days.`,
+      entityType: "unit",
+      entityId: u.id,
+      buildingId: u.buildingId,
+      recommendedAction: "Log showings, inquiries, or follow-ups. No leasing activity in 14+ days.",
+    });
+  }
+
+  return signals;
+}
+
+// ── Detection: Lease Expiring Soon — No Renewal Activity ───────
+
+async function detectLeaseExpiringSoonNoRenewal(): Promise<DetectedSignal[]> {
+  const signals: DetectedSignal[] = [];
+  const now = new Date();
+  const fortyFiveDays = new Date();
+  fortyFiveDays.setDate(fortyFiveDays.getDate() + 45);
+
+  const tenants = await prisma.tenant.findMany({
+    where: {
+      leaseExpiration: { gte: now, lte: fortyFiveDays },
+      moveOutDate: null,
+      leaseStatus: { in: ["active", "expiring-soon"] },
+    },
+    select: {
+      id: true,
+      name: true,
+      leaseExpiration: true,
+      unit: {
+        select: {
+          id: true,
+          unitNumber: true,
+          buildingId: true,
+          building: { select: { address: true } },
+          leases: {
+            where: { leaseStart: { gte: now } },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  for (const t of tenants) {
+    // Skip if a future lease already exists (renewal signed)
+    if (t.unit.leases.length > 0) continue;
+
+    const daysUntil = Math.ceil((t.leaseExpiration!.getTime() - now.getTime()) / 86400000);
+    signals.push({
+      deduplicationKey: `lease-no-renewal-${t.id}`,
+      type: "leasing_risk",
+      severity: "high",
+      title: `Lease expires in ${daysUntil} days — no renewal signed`,
+      description: `${t.name} at ${t.unit.building.address} #${t.unit.unitNumber}. No future lease found.`,
+      entityType: "tenant",
+      entityId: t.id,
+      buildingId: t.unit.buildingId,
+      tenantId: t.id,
+      recommendedAction: "Send renewal offer or begin vacancy preparation. No renewal lease on file.",
+    });
   }
 
   return signals;

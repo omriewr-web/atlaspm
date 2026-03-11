@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { maintenanceScheduleSchema } from "@/lib/validations";
-import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
 
 export const GET = withAuth(async (req, { user }) => {
   const scope = getBuildingScope(user);
@@ -22,8 +22,12 @@ export const GET = withAuth(async (req, { user }) => {
   return NextResponse.json(schedules);
 }, "maintenance");
 
-export const POST = withAuth(async (req) => {
+export const POST = withAuth(async (req, { user }) => {
   const data = await parseBody(req, maintenanceScheduleSchema);
+
+  // Verify building access
+  const accessErr = await assertBuildingAccess(user, data.buildingId);
+  if (accessErr) return accessErr;
 
   const schedule = await prisma.maintenanceSchedule.create({
     data: {

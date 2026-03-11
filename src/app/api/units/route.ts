@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
-import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
 import { getDisplayAddress } from "@/lib/building-matching";
 
 export const GET = withAuth(async (req, { user }) => {
@@ -27,6 +27,7 @@ export const GET = withAuth(async (req, { user }) => {
       id: u.id,
       unitNumber: u.unitNumber,
       unitType: u.unitType,
+      askingRent: u.askingRent ? Number(u.askingRent) : null,
       isVacant: u.isVacant,
       buildingId: u.building.id,
       buildingAddress: getDisplayAddress(u.building),
@@ -38,11 +39,15 @@ export const GET = withAuth(async (req, { user }) => {
   );
 });
 
-export const POST = withAuth(async (req) => {
+export const POST = withAuth(async (req, { user }) => {
   const { buildingId, unitNumber, unitType } = await req.json();
   if (!buildingId || !unitNumber) {
     return NextResponse.json({ error: "buildingId and unitNumber required" }, { status: 400 });
   }
+
+  // Verify building access
+  const accessErr = await assertBuildingAccess(user, buildingId);
+  if (accessErr) return accessErr;
 
   const existing = await prisma.unit.findUnique({
     where: { buildingId_unitNumber: { buildingId, unitNumber } },

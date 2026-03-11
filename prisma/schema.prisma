@@ -17,6 +17,7 @@ enum UserRole {
   COLLECTOR
   OWNER
   BROKER
+  LEASING_AGENT
 }
 
 model User {
@@ -53,6 +54,7 @@ model User {
   scanLogs            SignalScanLog[]
   assignedTurnovers   TurnoverWorkflow[] @relation("TurnoverAssignee")
   workOrderActivities WorkOrderActivity[] @relation("WorkOrderActivityUser")
+  leasingActivities   LeasingActivity[]
 
   @@map("users")
 }
@@ -147,6 +149,7 @@ model Building {
   commercialUnits      Int                   @default(0)
   lastInspectionDate   DateTime?
   notes                String?
+  publicAccessToken    String?               @unique
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   units                Unit[]
@@ -174,6 +177,7 @@ model Building {
   arSnapshots          ARSnapshot[]
   utilityMeterRecords  UtilityMeter[]
   turnoverWorkflows    TurnoverWorkflow[]
+  leasingActivities    LeasingActivity[]
 
   @@index([organizationId])
   @@index([ownerId])
@@ -192,6 +196,7 @@ model Unit {
   unitNumber           String
   unitType             String?
   unitCategory         String?               // "residential", "commercial", "parking", "laundry", "super", "other"
+  askingRent           Decimal?              @db.Decimal(10, 2)
   isVacant             Boolean               @default(false)
   isResidential        Boolean               @default(true)
   building             Building              @relation(fields: [buildingId], references: [id], onDelete: Cascade)
@@ -212,6 +217,7 @@ model Unit {
   complaints           Complaint[]
   utilityMeterRecords  UtilityMeter[]
   turnoverWorkflows    TurnoverWorkflow[]
+  leasingActivities    LeasingActivity[]
 
   @@unique([buildingId, unitNumber])
   @@map("units")
@@ -518,6 +524,7 @@ model EmailLog {
 // ── Work Order & Maintenance ──────────────────────────────────────
 
 enum WorkOrderStatus {
+  PENDING_REVIEW
   OPEN
   IN_PROGRESS
   ON_HOLD
@@ -1126,6 +1133,26 @@ model Vacancy {
   @@index([isActive])
   @@index([stage])
   @@map("vacancies")
+}
+
+model LeasingActivity {
+  id          String   @id @default(cuid())
+  unitId      String
+  buildingId  String
+  userId      String
+  type        String   // showing, application, follow_up, offer_sent, lease_signed, inquiry, note
+  description String?  @db.Text
+  contactName String?
+  contactInfo String?
+  createdAt   DateTime @default(now())
+  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  building    Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([unitId])
+  @@index([buildingId])
+  @@index([createdAt])
+  @@map("leasing_activities")
 }
 
 model Inspection {

@@ -86,7 +86,7 @@ export const POST = withAuth(async (req, { user }) => {
     for (let i = analysis.dataStartRow; i < rawRows.length; i++) rowToBuilding.set(i, buildingSections[0]);
   } else if (buildingSections.length > 1) {
     for (let i = analysis.dataStartRow; i < rawRows.length; i++) {
-      const owner = buildingSections.find((s) => s.rowIndex >= i) ?? buildingSections[buildingSections.length - 1];
+      const owner = [...buildingSections].reverse().find((s) => s.rowIndex <= i) ?? buildingSections[buildingSections.length - 1];
       rowToBuilding.set(i, owner);
     }
   }

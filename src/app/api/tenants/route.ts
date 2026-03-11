@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { tenantCreateSchema } from "@/lib/validations";
 import { TenantView } from "@/types";
-import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getTenantScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
 import { getArrearsCategory, getArrearsDays, getLeaseStatus, calcCollectionScore } from "@/lib/scoring";
 import { getDisplayAddress } from "@/lib/building-matching";
 import { scoreLegalCandidate } from "@/lib/legal-matching";
@@ -111,8 +111,12 @@ export const GET = withAuth(async (req, { user }) => {
   return NextResponse.json(result);
 });
 
-export const POST = withAuth(async (req) => {
+export const POST = withAuth(async (req, { user }) => {
   const data = await parseBody(req, tenantCreateSchema);
+
+  // Verify building access
+  const accessErr = await assertBuildingAccess(user, data.buildingId);
+  if (accessErr) return accessErr;
 
   // Find or create unit
   let unit = await prisma.unit.findUnique({

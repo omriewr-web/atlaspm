@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { MessageSquare } from "lucide-react";
 
 const COLUMNS: { status: WorkOrderStatus; label: string; color: string }[] = [
+  { status: "PENDING_REVIEW", label: "Pending Review", color: "border-t-purple-500" },
   { status: "OPEN", label: "Open", color: "border-t-blue-500" },
   { status: "IN_PROGRESS", label: "In Progress", color: "border-t-amber-500" },
   { status: "ON_HOLD", label: "On Hold", color: "border-t-gray-500" },

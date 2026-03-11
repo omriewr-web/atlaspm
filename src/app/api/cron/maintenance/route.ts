@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withCronAuth } from "@/lib/with-cron-auth";
 
 function advanceDate(date: Date, frequency: string): Date {
   const next = new Date(date);
@@ -20,14 +21,7 @@ function advanceDate(date: Date, frequency: string): Date {
   return next;
 }
 
-export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAuth(async () => {
   const now = new Date();
   let created = 0;
   let skipped = 0;
@@ -110,4 +104,4 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
-}
+});

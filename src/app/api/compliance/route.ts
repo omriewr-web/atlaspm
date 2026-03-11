@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { complianceItemCreateSchema } from "@/lib/validations";
-import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
 import { getDisplayAddress } from "@/lib/building-matching";
 import type { ComplianceItemView } from "@/types";
 
@@ -66,8 +66,12 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   return NextResponse.json(items.map(mapComplianceItem));
 }, "compliance");
 
-export const POST = withAuth(async (req: NextRequest) => {
+export const POST = withAuth(async (req: NextRequest, { user }) => {
   const data = await parseBody(req, complianceItemCreateSchema);
+
+  // Verify building access
+  const accessErr = await assertBuildingAccess(user, data.buildingId);
+  if (accessErr) return accessErr;
 
   const item = await prisma.complianceItem.create({
     data: {

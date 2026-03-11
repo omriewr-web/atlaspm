@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Building2, Users, DollarSign, TrendingUp, TrendingDown, Minus,
   AlertTriangle, Scale, DoorOpen, ChevronUp, ChevronDown,
+  CalendarClock, Activity,
 } from "lucide-react";
 import { useOwnerDashboard } from "@/hooks/use-owner-dashboard";
 import StatCard from "@/components/ui/stat-card";
@@ -238,6 +239,101 @@ export default function OwnerDashboardContent() {
             </div>
           ) : (
             <p className="text-sm text-text-dim text-center py-4">No active legal cases</p>
+          )}
+        </div>
+      </div>
+
+      {/* Upcoming Renewals & Vacancy Pipeline */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Renewals */}
+        <div className="bg-card-gradient border border-border rounded-xl p-5">
+          <h3 className="text-sm font-medium text-text-muted mb-4 flex items-center gap-2">
+            <CalendarClock className="w-4 h-4" />
+            Upcoming Renewals (90 days)
+          </h3>
+          {data.renewals.length > 0 ? (
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-text-dim border-b border-border">
+                    <th className="text-left py-1.5 font-medium">Tenant</th>
+                    <th className="text-left py-1.5 font-medium">Unit</th>
+                    <th className="text-right py-1.5 font-medium">Days</th>
+                    <th className="text-right py-1.5 font-medium">Rent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.renewals.map((r) => (
+                    <tr key={r.tenantId} className="border-b border-border/50 last:border-0">
+                      <td className="py-1.5 text-text-primary truncate max-w-[120px]">{r.tenantName}</td>
+                      <td className="py-1.5 text-text-muted">
+                        <span className="truncate max-w-[100px] inline-block">{r.buildingAddress}</span>
+                        <span className="text-text-dim ml-1">#{r.unitNumber}</span>
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums">
+                        <span className={r.daysUntilExpiry <= 30 ? "text-red-400 font-medium" : r.daysUntilExpiry <= 60 ? "text-orange-400" : "text-text-muted"}>
+                          {r.daysUntilExpiry}
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-right text-text-primary tabular-nums">{fmt$(r.currentRent)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-text-dim text-center py-6">No leases expiring in the next 90 days</p>
+          )}
+        </div>
+
+        {/* Vacancy Pipeline */}
+        <div className="bg-card-gradient border border-border rounded-xl p-5">
+          <h3 className="text-sm font-medium text-text-muted mb-4 flex items-center gap-2">
+            <Activity className="w-4 h-4" />
+            Vacancy Pipeline
+          </h3>
+          {data.vacancyPipeline.length > 0 ? (
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-text-dim border-b border-border">
+                    <th className="text-left py-1.5 font-medium">Unit</th>
+                    <th className="text-right py-1.5 font-medium">Asking</th>
+                    <th className="text-right py-1.5 font-medium">Days</th>
+                    <th className="text-right py-1.5 font-medium">Activity</th>
+                    <th className="text-left py-1.5 font-medium">Last</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.vacancyPipeline.map((v) => (
+                    <tr key={v.unitId} className="border-b border-border/50 last:border-0">
+                      <td className="py-1.5 text-text-primary">
+                        <span className="truncate max-w-[100px] inline-block">{v.buildingAddress}</span>
+                        <span className="text-text-dim ml-1">#{v.unitNumber}</span>
+                      </td>
+                      <td className="py-1.5 text-right text-text-muted tabular-nums">{v.askingRent ? fmt$(v.askingRent) : "—"}</td>
+                      <td className="py-1.5 text-right tabular-nums">
+                        <span className={v.daysVacant >= 60 ? "text-red-400" : v.daysVacant >= 30 ? "text-orange-400" : "text-text-muted"}>
+                          {v.daysVacant}
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums">
+                        <span className={v.recentActivityCount === 0 ? "text-red-400" : "text-text-muted"}>
+                          {v.recentActivityCount}
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-text-dim">
+                        {v.lastActivityDate
+                          ? `${v.lastActivityType} — ${new Date(v.lastActivityDate).toLocaleDateString()}`
+                          : "No activity"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-text-dim text-center py-6">No vacant units</p>
           )}
         </div>
       </div>

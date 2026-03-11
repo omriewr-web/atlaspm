@@ -176,6 +176,7 @@ export const tenantRequestSchema = z.object({
   tenantName: z.string().min(1, "Name is required"),
   tenantContact: z.string().min(1, "Contact info is required"),
   photos: z.array(z.string()).nullable().optional(),
+  token: z.string().min(1, "Building token is required"),
 });
 
 export const emailSendSchema = z.object({

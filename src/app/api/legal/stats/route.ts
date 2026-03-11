@@ -52,9 +52,23 @@ export const GET = withAuth(async (req, { user }) => {
       },
     }),
 
-    prisma.legalImportQueue.count({
-      where: { status: "pending" },
-    }),
+    (async () => {
+      // Scope pendingReview to tenants the user can access
+      if (user.role === "ADMIN") {
+        return prisma.legalImportQueue.count({ where: { status: "pending" } });
+      }
+      const assigned = user.assignedProperties ?? [];
+      if (assigned.length === 0) return 0;
+      const scopedTenantIds = await prisma.tenant.findMany({
+        where: { unit: { buildingId: { in: assigned } } },
+        select: { id: true },
+      });
+      const ids = scopedTenantIds.map((t) => t.id);
+      if (ids.length === 0) return 0;
+      return prisma.legalImportQueue.count({
+        where: { status: "pending", candidateTenantId: { in: ids } },
+      });
+    })(),
   ]);
 
   return NextResponse.json({

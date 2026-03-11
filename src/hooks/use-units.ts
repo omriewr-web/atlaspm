@@ -7,6 +7,7 @@ export interface UnitView {
   id: string;
   unitNumber: string;
   unitType: string | null;
+  askingRent: number | null;
   isVacant: boolean;
   buildingId: string;
   buildingAddress: string;

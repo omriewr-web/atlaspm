@@ -6,9 +6,20 @@ import { buildingCreateSchema } from "@/lib/validations";
 import { getBuildingIdScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { getDisplayAddress } from "@/lib/building-matching";
 
+interface BuildingAggRow {
+  buildingId: string;
+  totalMarketRent: number;
+  totalBalance: number;
+  legalBalance: number;
+  arrearsCount: number;
+  legalCount: number;
+}
+
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const portfolio = url.searchParams.get("portfolio");
+  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
+  const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10)));
 
   const scope = getBuildingIdScope(user);
   if (scope === EMPTY_SCOPE) return NextResponse.json([]);
@@ -16,40 +27,120 @@ export const GET = withAuth(async (req, { user }) => {
   const where: any = { ...scope };
   if (portfolio) where.portfolio = portfolio;
 
+  // Fetch buildings with _count aggregations instead of nested includes
   const buildings = await prisma.building.findMany({
     where,
-    include: {
-      units: {
-        include: {
-          tenant: {
-            select: { id: true, balance: true, marketRent: true, legalCases: { where: { isActive: true }, select: { inLegal: true }, take: 1 } },
-          },
+    select: {
+      id: true,
+      yardiId: true,
+      address: true,
+      altAddress: true,
+      buildingName: true,
+      entity: true,
+      portfolio: true,
+      region: true,
+      zip: true,
+      block: true,
+      lot: true,
+      type: true,
+      owner: true,
+      ownerEmail: true,
+      manager: true,
+      arTeam: true,
+      apTeam: true,
+      headPortfolio: true,
+      mgmtStartDate: true,
+      einNumber: true,
+      bin: true,
+      mdrNumber: true,
+      dhcrRegId: true,
+      squareFootage: true,
+      yearBuilt: true,
+      constructionType: true,
+      floors: true,
+      floorsBelowGround: true,
+      lifeSafety: true,
+      elevatorInfo: true,
+      boilerInfo: true,
+      complianceDates: true,
+      superintendent: true,
+      elevatorCompany: true,
+      fireAlarmCompany: true,
+      utilityMeters: true,
+      utilityAccounts: true,
+      _count: {
+        select: {
+          units: { where: { isResidential: true } },
         },
       },
-      _count: { select: { units: true } },
     },
     orderBy: { address: "asc" },
+    skip: (page - 1) * limit,
+    take: limit,
   });
 
-  const result = buildings.map((b) => {
-    const residentialUnits = b.units.filter((u) => u.isResidential !== false);
-    const occupied = residentialUnits.filter((u) => !u.isVacant).length;
-    const vacant = residentialUnits.filter((u) => u.isVacant).length;
-    const totalMarketRent = residentialUnits.reduce((sum, u) => sum + Number(u.tenant?.marketRent ?? 0), 0);
-    const totalBalance = residentialUnits.reduce((sum, u) => sum + Number(u.tenant?.balance ?? 0), 0);
-    const legalBalance = residentialUnits
-      .filter((u) => u.tenant?.legalCases?.[0]?.inLegal === true)
-      .reduce((sum, u) => sum + Number(u.tenant?.balance ?? 0), 0);
-    const nonLegalBalance = totalBalance - legalBalance;
-    const arrearsCount = residentialUnits.filter((u) => Number(u.tenant?.balance ?? 0) > 0).length;
-    const legalCount = residentialUnits.filter((u) => u.tenant?.legalCases?.[0]?.inLegal === true).length;
+  if (buildings.length === 0) return NextResponse.json([]);
 
-    const displayAddress = getDisplayAddress(b);
+  const buildingIds = buildings.map((b) => b.id);
+
+  // Parallel queries: vacant count + financial aggregations
+  const [vacantCounts, financialAggs] = await Promise.all([
+    // Vacant unit counts per building via groupBy
+    prisma.unit.groupBy({
+      by: ["buildingId"],
+      where: { buildingId: { in: buildingIds }, isResidential: true, isVacant: true },
+      _count: true,
+    }),
+
+    // Financial aggregations via raw query — avoids fetching all tenant rows
+    prisma.$queryRaw<BuildingAggRow[]>`
+      SELECT
+        u."buildingId" AS "buildingId",
+        COALESCE(SUM(t."marketRent"), 0)::float AS "totalMarketRent",
+        COALESCE(SUM(t."balance"), 0)::float AS "totalBalance",
+        COALESCE(SUM(
+          CASE WHEN EXISTS (
+            SELECT 1 FROM legal_cases lc
+            WHERE lc."tenantId" = t.id AND lc."isActive" = true AND lc."inLegal" = true
+          ) THEN t."balance" ELSE 0 END
+        ), 0)::float AS "legalBalance",
+        COUNT(CASE WHEN t."balance" > 0 THEN 1 END)::int AS "arrearsCount",
+        COUNT(CASE WHEN EXISTS (
+          SELECT 1 FROM legal_cases lc
+          WHERE lc."tenantId" = t.id AND lc."isActive" = true AND lc."inLegal" = true
+        ) THEN 1 END)::int AS "legalCount"
+      FROM units u
+      LEFT JOIN tenants t ON t."unitId" = u.id
+      WHERE u."buildingId" IN (${Prisma.join(buildingIds)})
+        AND u."isResidential" = true
+      GROUP BY u."buildingId"
+    `,
+  ]);
+
+  // Build lookup maps
+  const vacantMap = new Map<string, number>();
+  for (const v of vacantCounts) {
+    vacantMap.set(v.buildingId, v._count);
+  }
+
+  const aggMap = new Map<string, BuildingAggRow>();
+  for (const a of financialAggs) {
+    aggMap.set(a.buildingId, a);
+  }
+
+  const result = buildings.map((b) => {
+    const totalUnits = b._count.units;
+    const vacant = vacantMap.get(b.id) ?? 0;
+    const occupied = totalUnits - vacant;
+    const agg = aggMap.get(b.id);
+    const totalMarketRent = agg?.totalMarketRent ?? 0;
+    const totalBalance = agg?.totalBalance ?? 0;
+    const legalBalance = agg?.legalBalance ?? 0;
 
     return {
       id: b.id,
       yardiId: b.yardiId,
-      address: displayAddress,
+      address: getDisplayAddress(b),
       altAddress: b.altAddress,
       entity: b.entity,
       portfolio: b.portfolio,
@@ -83,15 +174,15 @@ export const GET = withAuth(async (req, { user }) => {
       fireAlarmCompany: b.fireAlarmCompany,
       utilityMeters: b.utilityMeters,
       utilityAccounts: b.utilityAccounts,
-      totalUnits: residentialUnits.length,
+      totalUnits,
       occupied,
       vacant,
       totalMarketRent,
       totalBalance,
       legalBalance,
-      nonLegalBalance,
-      arrearsCount,
-      legalCount,
+      nonLegalBalance: totalBalance - legalBalance,
+      arrearsCount: agg?.arrearsCount ?? 0,
+      legalCount: agg?.legalCount ?? 0,
       legalCaseCount: 0,
     };
   });

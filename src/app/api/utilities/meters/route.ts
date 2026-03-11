@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
-import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
 import { computeRiskFlags, primaryRiskFlag } from "@/lib/utility-risk";
 
 export const GET = withAuth(async (req, { user }) => {
@@ -135,6 +135,10 @@ export const POST = withAuth(async (req, { user }) => {
   if (!buildingId || !utilityType) {
     return NextResponse.json({ error: "buildingId and utilityType are required" }, { status: 400 });
   }
+
+  // Verify building access
+  const accessErr = await assertBuildingAccess(user, buildingId);
+  if (accessErr) return accessErr;
 
   const meter = await prisma.utilityMeter.create({
     data: {

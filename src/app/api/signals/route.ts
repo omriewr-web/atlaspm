@@ -25,11 +25,7 @@ export const GET = withAuth(async (req, { user }) => {
     if (assigned.length === 0) {
       return NextResponse.json({ signals: [], counts: { critical: 0, high: 0, medium: 0, low: 0, total: 0 } });
     }
-    // Show signals for assigned buildings + signals with no buildingId (portfolio-level)
-    where.OR = [
-      { buildingId: { in: assigned } },
-      { buildingId: null },
-    ];
+    where.buildingId = { in: assigned };
   }
 
   const signals = await prisma.operationalSignal.findMany({
@@ -72,8 +68,11 @@ export const GET = withAuth(async (req, { user }) => {
   return NextResponse.json({ signals, counts, lastScan });
 }, "dash");
 
-// POST /api/signals — trigger a scan (admin only for now)
+// POST /api/signals — trigger a scan (admin only)
 export const POST = withAuth(async (req, { user }) => {
+  if (user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const result = await runSignalScan("manual", user.id);
   return NextResponse.json(result);
 }, "dash");
