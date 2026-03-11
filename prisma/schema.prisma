@@ -51,6 +51,7 @@ model User {
   acknowledgedSignals OperationalSignal[] @relation("SignalAcknowledger")
   resolvedSignals     OperationalSignal[] @relation("SignalResolver")
   scanLogs            SignalScanLog[]
+  assignedTurnovers   TurnoverWorkflow[] @relation("TurnoverAssignee")
 
   @@map("users")
 }
@@ -171,6 +172,7 @@ model Building {
   collectionNotes      CollectionNote[]
   arSnapshots          ARSnapshot[]
   utilityMeterRecords  UtilityMeter[]
+  turnoverWorkflows    TurnoverWorkflow[]
 
   @@index([organizationId])
   @@index([ownerId])
@@ -208,6 +210,7 @@ model Unit {
   activityEvents       ActivityEvent[]
   complaints           Complaint[]
   utilityMeterRecords  UtilityMeter[]
+  turnoverWorkflows    TurnoverWorkflow[]
 
   @@unique([buildingId, unitNumber])
   @@map("units")
@@ -553,6 +556,7 @@ model Vendor {
   vacanciesBrokered    Vacancy[]        @relation("VacancyBroker")
   legalCasesAsAttorney LegalCase[]      @relation("LegalCaseAttorney")
   violationsAssigned   Violation[]      @relation("ViolationVendor")
+  turnoverAssignments  TurnoverVendorAssignment[]
 
   @@index([contactType])
   @@map("vendors")
@@ -1462,6 +1466,82 @@ model SignalScanLog {
 
   @@index([startedAt])
   @@map("signal_scan_logs")
+}
+
+// ── Turnover Workflow ────────────────────────────────────────
+
+enum TurnoverTrigger {
+  MANUAL
+  AUTO
+}
+
+enum TurnoverStatus {
+  PENDING_INSPECTION
+  INSPECTION_DONE
+  SCOPE_CREATED
+  VENDORS_ASSIGNED
+  READY_TO_LIST
+  LISTED
+  COMPLETE
+}
+
+enum TurnoverVendorStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+}
+
+model TurnoverWorkflow {
+  id                  String              @id @default(cuid())
+  unitId              String
+  buildingId          String
+  triggeredBy         TurnoverTrigger     @default(MANUAL)
+  moveOutDate         DateTime?
+  moveOutSource       String?             // "LEASE_END" | "MANUAL"
+  status              TurnoverStatus      @default(PENDING_INSPECTION)
+  inspectionDate      DateTime?
+  inspectionNotes     String?             @db.Text
+  inspectionChecklist Json?
+  scopeOfWork         String?             @db.Text
+  estimatedCost       Decimal?            @db.Decimal(10, 2)
+  listedDate          DateTime?
+  completedAt         DateTime?
+  assignedToUserId    String?
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  unit                Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  building            Building            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  assignedTo          User?               @relation("TurnoverAssignee", fields: [assignedToUserId], references: [id])
+  vendorAssignments   TurnoverVendorAssignment[]
+
+  @@index([unitId])
+  @@index([buildingId])
+  @@index([status])
+  @@index([isActive])
+  @@map("turnover_workflows")
+}
+
+model TurnoverVendorAssignment {
+  id                  String              @id @default(cuid())
+  turnoverWorkflowId  String
+  vendorId            String?
+  vendorName          String
+  trade               String              // paint, plumbing, electric, hvac, flooring, general, cleaning, other
+  status              TurnoverVendorStatus @default(PENDING)
+  scheduledDate       DateTime?
+  completedDate       DateTime?
+  cost                Decimal?            @db.Decimal(10, 2)
+  notes               String?             @db.Text
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  turnoverWorkflow    TurnoverWorkflow    @relation(fields: [turnoverWorkflowId], references: [id], onDelete: Cascade)
+  vendor              Vendor?             @relation(fields: [vendorId], references: [id])
+
+  @@index([turnoverWorkflowId])
+  @@map("turnover_vendor_assignments")
 }
 
 model SnoozedAction {

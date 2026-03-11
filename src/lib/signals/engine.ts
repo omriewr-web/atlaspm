@@ -50,6 +50,8 @@ export async function runSignalScan(
       detectOccupiedUnitMissingLease(),
       detectRecurringIssuePattern(),
       detectLegalCaseStale(),
+      detectVacantUnitWithoutTurnover(),
+      detectTurnoverStalled(),
     ]);
 
     // Collect all detected signals
@@ -949,4 +951,105 @@ async function detectLegalCaseStale(): Promise<DetectedSignal[]> {
   // This function intentionally returns empty to avoid duplicate signals.
   // The stale case logic lives in detectLegalEscalations with dedup key "legal-stale-{caseId}".
   return [];
+}
+
+// ── Detection: Vacant Unit Without Turnover ──────────────────
+
+async function detectVacantUnitWithoutTurnover(): Promise<DetectedSignal[]> {
+  const signals: DetectedSignal[] = [];
+  const now = new Date();
+  const twoDaysAgo = new Date();
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+  // Vacant units with no active turnover workflow
+  const vacancies = await prisma.vacancy.findMany({
+    where: { isActive: true, createdAt: { lte: twoDaysAgo } },
+    select: {
+      id: true,
+      createdAt: true,
+      unitId: true,
+      unit: {
+        select: {
+          id: true,
+          unitNumber: true,
+          buildingId: true,
+          building: { select: { address: true } },
+          turnoverWorkflows: {
+            where: { isActive: true },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  for (const v of vacancies) {
+    if (v.unit.turnoverWorkflows.length > 0) continue;
+    const daysVacant = Math.ceil((now.getTime() - v.createdAt.getTime()) / 86400000);
+
+    signals.push({
+      deduplicationKey: `vacant-no-turnover-${v.unit.id}`,
+      type: "vacancy_risk",
+      severity: "medium",
+      title: `Vacant ${daysVacant} days, no turnover started — ${v.unit.building.address} #${v.unit.unitNumber}`,
+      description: `Unit has been vacant for ${daysVacant} days with no turnover workflow created.`,
+      entityType: "unit",
+      entityId: v.unit.id,
+      buildingId: v.unit.buildingId,
+      recommendedAction: `Unit vacant ${daysVacant} days with no turnover started. Create turnover workflow.`,
+    });
+  }
+
+  return signals;
+}
+
+// ── Detection: Turnover Stalled ──────────────────────────────
+
+async function detectTurnoverStalled(): Promise<DetectedSignal[]> {
+  const signals: DetectedSignal[] = [];
+  const now = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  // Active turnovers not updated in 7+ days and not complete
+  const turnovers = await prisma.turnoverWorkflow.findMany({
+    where: {
+      isActive: true,
+      status: { not: "COMPLETE" },
+      updatedAt: { lte: sevenDaysAgo },
+    },
+    select: {
+      id: true,
+      status: true,
+      updatedAt: true,
+      unit: {
+        select: {
+          id: true,
+          unitNumber: true,
+          buildingId: true,
+          building: { select: { address: true } },
+        },
+      },
+    },
+  });
+
+  for (const t of turnovers) {
+    const daysSinceUpdate = Math.ceil((now.getTime() - t.updatedAt.getTime()) / 86400000);
+    const statusLabel = t.status.replace(/_/g, " ").toLowerCase();
+
+    signals.push({
+      deduplicationKey: `turnover-stalled-${t.id}`,
+      type: "vacancy_risk",
+      severity: "high",
+      title: `Turnover stalled ${daysSinceUpdate} days — ${t.unit.building.address} #${t.unit.unitNumber}`,
+      description: `Turnover workflow stuck at "${statusLabel}" for ${daysSinceUpdate} days.`,
+      entityType: "unit",
+      entityId: t.unit.id,
+      buildingId: t.unit.buildingId,
+      recommendedAction: `Turnover stalled at ${statusLabel} for ${daysSinceUpdate} days. Review and advance.`,
+    });
+  }
+
+  return signals;
 }
