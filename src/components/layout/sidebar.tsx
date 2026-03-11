@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Gauge,
   Radio,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasPermission, UserRole } from "@/types";
@@ -30,6 +31,7 @@ type Section = "MAIN" | "COLLECTIONS" | "OPERATIONS" | "SETTINGS";
 
 const navItems: { href: string; label: string; icon: typeof LayoutDashboard; perm: string; section: Section }[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, perm: "dash", section: "MAIN" },
+  { href: "/owner-dashboard", label: "Owner Dashboard", icon: Building2, perm: "owner", section: "MAIN" },
   { href: "/coeus", label: "Coeus", icon: Radio, perm: "dash", section: "MAIN" },
   { href: "/daily", label: "Daily Summary", icon: CalendarClock, perm: "dash", section: "MAIN" },
   { href: "/alerts", label: "Arrears Alerts", icon: AlertTriangle, perm: "fin", section: "COLLECTIONS" },

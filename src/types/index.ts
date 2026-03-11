@@ -181,11 +181,11 @@ export interface PortfolioMetrics {
 }
 
 export const ROLE_PERMISSIONS: Record<UserRole, Record<string, boolean>> = {
-  ADMIN:     { allProps: true, dash: true, notes: true, pay: true, legal: true, upload: true, users: true, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true, collections: true, utilities: true },
-  PM:        { allProps: false, dash: true, notes: true, pay: true, legal: true, upload: true, users: false, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true, collections: true, utilities: true },
-  COLLECTOR: { allProps: false, dash: true, notes: true, pay: true, legal: false, upload: false, users: false, vac: false, lease: false, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true, collections: true, utilities: true },
-  OWNER:     { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: true, reports: true, edit: false, email: false, maintenance: false, compliance: false, collections: false, utilities: false },
-  BROKER:    { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: false, email: false, maintenance: false, compliance: false, collections: false, utilities: false },
+  ADMIN:     { allProps: true, dash: true, notes: true, pay: true, legal: true, upload: true, users: true, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true, collections: true, utilities: true, owner: true },
+  PM:        { allProps: false, dash: true, notes: true, pay: true, legal: true, upload: true, users: false, vac: true, lease: true, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true, collections: true, utilities: true, owner: false },
+  COLLECTOR: { allProps: false, dash: true, notes: true, pay: true, legal: false, upload: false, users: false, vac: false, lease: false, fin: true, reports: true, edit: true, email: true, maintenance: true, compliance: true, collections: true, utilities: true, owner: false },
+  OWNER:     { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: true, reports: true, edit: false, email: false, maintenance: false, compliance: false, collections: false, utilities: false, owner: true },
+  BROKER:    { allProps: false, dash: true, notes: false, pay: false, legal: false, upload: false, users: false, vac: true, lease: true, fin: false, reports: false, edit: false, email: false, maintenance: false, compliance: false, collections: false, utilities: false, owner: false },
 };
 
 export function hasPermission(role: UserRole, perm: string): boolean {
@@ -328,4 +328,61 @@ export interface BuildingScorecard {
   overdueItems: number;
   healthScore: number;
   healthLabel: string;
+}
+
+// ── Owner Dashboard Types ─────────────────────────────────────
+
+export interface OwnerDashboardDTO {
+  generatedAt: string;
+  portfolio: {
+    totalUnits: number;
+    occupiedUnits: number;
+    vacantUnits: number;
+    occupancyRate: number;
+    totalMonthlyRent: number;
+    totalArrears: number;
+    collectionRate: number | null;
+    arrearsTrend: "improving" | "worsening" | "flat" | null;
+    priorMonthArrears: number | null;
+  };
+  arrears: {
+    current: { count: number; amount: number };
+    d30: { count: number; amount: number };
+    d60: { count: number; amount: number };
+    d90: { count: number; amount: number };
+    d120plus: { count: number; amount: number };
+  };
+  vacancies: {
+    count: number;
+    rate: number;
+    estimatedLostRent: number;
+    units: {
+      buildingAddress: string;
+      unitNumber: string;
+      daysVacant: number;
+      estimatedLostRent: number;
+    }[];
+  };
+  violations: {
+    totalOpen: number;
+    classA: number;
+    classB: number;
+    classC: number;
+    pastCureDate: number;
+    topBuildings: { address: string; count: number }[];
+  };
+  legal: {
+    totalActive: number;
+    totalBalance: number;
+    byStage: Record<string, number>;
+  };
+  buildings: {
+    id: string;
+    address: string;
+    totalUnits: number;
+    occupancyRate: number;
+    arrears: number;
+    openViolations: number;
+    activeLegalCases: number;
+  }[];
 }
