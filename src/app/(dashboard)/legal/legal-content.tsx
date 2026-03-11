@@ -8,7 +8,7 @@ import { useCourtDates, useLegalStats, type CourtDateItem } from "@/hooks/use-le
 import { Gavel, CalendarClock, UserX as UserXIcon, UserMinus, ClipboardCheck } from "lucide-react";
 import Button from "@/components/ui/button";
 import StatCard from "@/components/ui/stat-card";
-import { PageSkeleton } from "@/components/ui/skeleton";
+import { TablePageSkeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/ui/empty-state";
 import StageBadge from "@/components/legal/stage-badge";
 import LegalModal from "@/components/legal/legal-modal";
@@ -115,7 +115,7 @@ export default function LegalContent() {
 
   const courtDateCount = courtData?.cases?.length ?? 0;
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <TablePageSkeleton />;
 
   const tabs = [
     { key: "cases" as const, label: "Active Cases", icon: Scale, badge: legalTenants.length },

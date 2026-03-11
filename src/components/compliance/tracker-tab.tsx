@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Wand2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Wand2, ClipboardCheck } from "lucide-react";
 import { useComplianceItems, useDeleteComplianceItem, useGenerateComplianceDefaults } from "@/hooks/use-compliance";
+import EmptyState from "@/components/ui/empty-state";
 import { useAppStore } from "@/stores/app-store";
 import Button from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -128,9 +129,7 @@ export default function TrackerTab() {
           </tbody>
         </table>
         {(!items || items.length === 0) && (
-          <div className="text-center py-12 text-text-dim text-sm">
-            No compliance items found. {selectedBuildingId ? 'Click "Generate Defaults" to add standard NYC compliance items.' : "Select a building to get started."}
-          </div>
+          <EmptyState icon={ClipboardCheck} title="No compliance items found" description={selectedBuildingId ? 'Click "Generate Defaults" to add standard NYC compliance items.' : "Select a building to get started."} />
         )}
       </div>
 

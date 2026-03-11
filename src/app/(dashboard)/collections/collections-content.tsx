@@ -27,7 +27,7 @@ import {
 } from "@/hooks/use-collections";
 import { useBuildings } from "@/hooks/use-buildings";
 import StatCard from "@/components/ui/stat-card";
-import { PageSkeleton } from "@/components/ui/skeleton";
+import { TablePageSkeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/ui/empty-state";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
@@ -317,7 +317,7 @@ export default function CollectionsContent() {
     );
   }
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <TablePageSkeleton />;
 
   return (
     <div className="space-y-6 animate-fade-in">

@@ -34,6 +34,22 @@ export function ChartSkeleton() {
   );
 }
 
+export function TablePageSkeleton({ cards = 4, rows = 8 }: { cards?: number; rows?: number }) {
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <Skeleton className="h-8 w-40" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: cards }).map((_, i) => (
+          <StatCardSkeleton key={i} />
+        ))}
+      </div>
+      <div className="bg-card-gradient border border-border rounded-xl p-5">
+        <TableSkeleton rows={rows} />
+      </div>
+    </div>
+  );
+}
+
 export function PageSkeleton() {
   return (
     <div className="space-y-6 animate-fade-in">

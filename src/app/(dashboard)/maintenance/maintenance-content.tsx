@@ -5,7 +5,7 @@ import { Wrench, Plus, List, LayoutGrid, X } from "lucide-react";
 import { useWorkOrders, useBulkUpdateWorkOrders } from "@/hooks/use-work-orders";
 import { useVendors } from "@/hooks/use-vendors";
 import StatCard from "@/components/ui/stat-card";
-import { PageSkeleton } from "@/components/ui/skeleton";
+import { TablePageSkeleton } from "@/components/ui/skeleton";
 import Button from "@/components/ui/button";
 import KanbanBoard from "@/components/maintenance/kanban-board";
 import WorkOrderDetailModal from "@/components/maintenance/work-order-detail-modal";
@@ -95,7 +95,7 @@ export default function MaintenanceContent() {
     setBulkValue("");
   }
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <TablePageSkeleton />;
 
   return (
     <div className="space-y-6 animate-fade-in">
