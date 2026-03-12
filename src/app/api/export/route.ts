@@ -15,13 +15,16 @@ export async function GET(request: NextRequest) {
   const format = searchParams.get("format") || "csv";
 
   const user = session.user as any;
-  const scope = getOrgScope(user, buildingId);
+  const scope = getOrgScope(user);
 
   if (scope === EMPTY_SCOPE) {
     return new NextResponse("No data", { status: 204 });
   }
 
-  const where = { ...scope };
+  const where = {
+    ...scope,
+    ...(buildingId ? { buildingId } : {}),
+  };
 
   const tenants = await prisma.tenant.findMany({
     where,
@@ -33,65 +36,31 @@ export async function GET(request: NextRequest) {
     orderBy: { balance: "desc" },
   });
 
-  const rows = tenants.map((t) => ({
-    id: t.id,
-    unitId: t.unitId,
-    yardiResidentId: t.yardiResidentId,
-    name: t.name,
-    email: t.email,
-    phone: t.phone,
-    unitNumber: t.unit.unitNumber,
-    unitType: t.unit.unitType,
-    buildingId: t.unit.building.id,
-    buildingAddress: t.unit.building.address,
-    altAddress: t.unit.building.altAddress ?? "",
-    region: t.unit.building.region ?? "",
-    entity: t.unit.building.entity ?? "",
-    portfolio: t.unit.building.portfolio ?? "",
-    balance: Number(t.balance ?? 0),
-    monthlyRent: Number(t.monthlyRent ?? 0),
-    legalRent: Number(t.legalRent ?? 0),
-    leaseStart: t.leaseStart?.toISOString().split("T")[0] ?? "",
-    leaseEnd: t.leaseEnd?.toISOString().split("T")[0] ?? "",
-    moveInDate: t.moveInDate?.toISOString().split("T")[0] ?? "",
-    status: t.status,
-    collectionStatus: t.collectionStatus ?? "",
-    inLegal: t.legalCases?.[0]?.inLegal ?? false,
-    legalStage: t.legalCases?.[0]?.stage ?? "",
-    notesCount: t._count.notes,
-    paymentsCount: t._count.payments,
-    tasksCount: t._count.tasks,
-  }));
-
-  if (format === "json") {
-    return NextResponse.json(rows);
+  if (format === "csv") {
+    const headers = [
+      "Tenant Name", "Unit", "Building", "Balance", "Monthly Rent",
+      "Lease Start", "Lease End", "Status", "In Legal", "Notes Count"
+    ];
+    const rows = tenants.map((t) => [
+      t.name,
+      t.unit?.unitNumber ?? "",
+      t.unit?.building?.address ?? "",
+      t.balance?.toString() ?? "0",
+      t.monthlyRent?.toString() ?? "0",
+      t.leaseStart ? new Date(t.leaseStart).toLocaleDateString() : "",
+      t.leaseEnd ? new Date(t.leaseEnd).toLocaleDateString() : "",
+      t.status ?? "",
+      t.legalCases?.[0]?.inLegal ? "Yes" : "No",
+      String(t._count?.notes ?? 0),
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv",
+        "Content-Disposition": 'attachment; filename="tenants-export.csv"',
+      },
+    });
   }
 
-  if (rows.length === 0) {
-    return new NextResponse("No data", { status: 204 });
-  }
-
-  const headers = Object.keys(rows[0]) as (keyof typeof rows[0])[];
-  const csvLines = [
-    headers.join(","),
-    ...rows.map((r) =>
-      headers.map((h) => {
-        const val = r[h];
-        const str = val === null || val === undefined ? "" : String(val);
-        return str.includes(",") || str.includes('"') || str.includes("\n")
-          ? '"' + str.replace(/"/g, '""') + '"'
-          : str;
-      }).join(",")
-    ),
-  ];
-
-  const csv = csvLines.join("\n");
-  const filename = "ar-export-" + new Date().toISOString().split("T")[0] + ".csv";
-
-  return new NextResponse(csv, {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
-  });
+  return NextResponse.json(tenants);
 }
