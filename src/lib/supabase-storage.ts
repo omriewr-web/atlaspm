@@ -3,7 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+export const supabaseAdmin =
+  supabaseUrl && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey)
+    : (null as any);
 
 export const BUCKET_NAME = "work-order-photos";
 
@@ -21,6 +24,7 @@ export function validateImageFile(file: File): string | null {
 }
 
 export function getPublicUrl(path: string): string {
+  if (!supabaseAdmin) return "";
   const { data } = supabaseAdmin.storage.from(BUCKET_NAME).getPublicUrl(path);
   return data.publicUrl;
 }
