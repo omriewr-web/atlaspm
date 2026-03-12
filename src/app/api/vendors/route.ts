@@ -4,6 +4,8 @@ import { withAuth, parseBody } from "@/lib/api-helpers";
 import { vendorCreateSchema } from "@/lib/validations";
 import { getOrgScope } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user }) => {
   const { searchParams } = new URL(req.url);
   const buildingId = searchParams.get("buildingId");

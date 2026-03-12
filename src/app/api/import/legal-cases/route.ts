@@ -4,6 +4,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { parseLegalCasesExcel } from "@/lib/parsers/legal-cases.parser";
 import { importLegalCases } from "@/lib/services/legal-import.service";
 
+export const dynamic = "force-dynamic";
+
 export const POST = withAuth(async (req: NextRequest) => {
   const formData = await req.formData();
   const file = formData.get("file");

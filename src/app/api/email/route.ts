@@ -3,6 +3,8 @@ import { withAuth, parseBody } from "@/lib/api-helpers";
 import { emailSendSchema } from "@/lib/validations";
 import { sendEmail } from "@/lib/email-service";
 
+export const dynamic = "force-dynamic";
+
 export const POST = withAuth(async (req, { user }) => {
   const data = await parseBody(req, emailSendSchema);
 

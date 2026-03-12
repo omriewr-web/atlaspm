@@ -6,6 +6,8 @@ import { legalCaseSchema } from "@/lib/validations";
 import { assertTenantAccess } from "@/lib/data-scope";
 import { LegalStage } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 const LEGAL_CASE_INCLUDE = {
   notes: {
     orderBy: { createdAt: "desc" as const },

@@ -4,6 +4,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { parseBuildingDataExcel, buildingRowToPrismaData } from "@/lib/parsers/buildingParser";
 import { matchBuildingByRow, generateYardiId, generatePropertyId } from "@/lib/building-matching";
 
+export const dynamic = "force-dynamic";
+
 // POST /api/import/buildings
 // ?mode=preview  → parse file, return preview of what will be created/updated
 // ?mode=confirm  → actually import the data

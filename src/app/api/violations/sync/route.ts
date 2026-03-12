@@ -4,6 +4,8 @@ import { violationSyncSchema } from "@/lib/validations";
 import { syncBuildingViolations, syncAllBuildings } from "@/lib/violation-sync";
 import { assertBuildingAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const POST = withAuth(async (req: NextRequest, { user }) => {
   const body = await parseBody(req, violationSyncSchema);
 

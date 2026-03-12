@@ -323,3 +323,19 @@ export const complianceItemUpdateSchema = complianceItemCreateSchema.partial();
 export const complianceGenerateSchema = z.object({
   buildingId: z.string().min(1),
 });
+
+// ── Turnover Schemas ────────────────────────────────────────
+
+export const turnoverUpdateSchema = z.object({
+  status: z.enum([
+    "PENDING_INSPECTION", "INSPECTION_DONE", "SCOPE_CREATED",
+    "VENDORS_ASSIGNED", "READY_TO_LIST", "LISTED", "COMPLETE",
+  ]).optional(),
+  inspectionDate: z.string().nullable().optional(),
+  inspectionNotes: z.string().nullable().optional(),
+  inspectionChecklist: z.unknown().optional(),
+  scopeOfWork: z.string().nullable().optional(),
+  estimatedCost: z.number().min(0).nullable().optional(),
+  listedDate: z.string().nullable().optional(),
+  assignedToUserId: z.string().nullable().optional(),
+});

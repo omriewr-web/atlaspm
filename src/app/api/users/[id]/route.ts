@@ -6,6 +6,8 @@ import { canCreateRole } from "@/lib/permissions";
 import type { UserRole } from "@/types";
 import bcrypt from "bcryptjs";
 
+export const dynamic = "force-dynamic";
+
 export const PATCH = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const data = await parseBody(req, userUpdateSchema);

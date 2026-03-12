@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { assertTenantAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const DELETE = withAuth(async (req, { user, params }) => {
   const { id, noteId } = await params;
   const denied = await assertTenantAccess(user, id);

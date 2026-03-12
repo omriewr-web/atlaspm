@@ -4,6 +4,8 @@ import { withAuth, parseBody } from "@/lib/api-helpers";
 import { noteCreateSchema } from "@/lib/validations";
 import { assertTenantAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const denied = await assertTenantAccess(user, id);

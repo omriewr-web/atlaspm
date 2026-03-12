@@ -11,6 +11,8 @@ import { commitRentRollImport } from "@/lib/importer/commit";
 import { getImportContract } from "@/lib/importer/importContracts";
 import * as XLSX from "xlsx";
 
+export const dynamic = "force-dynamic";
+
 interface ColumnMappingEntry {
   columnIndex: number;
   sourceHeader: string;

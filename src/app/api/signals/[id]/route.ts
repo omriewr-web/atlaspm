@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 // PATCH /api/signals/[id] — acknowledge, resolve, or update fields
 export const PATCH = withAuth(async (req, { user, params }) => {
   const { id } = await params;

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 // GET — all active legal cases with court dates, scoped to user's buildings
 export const GET = withAuth(async (req, { user }) => {
   const tenantScope = getTenantScope(user);

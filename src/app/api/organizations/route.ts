@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import type { UserRole } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/organizations — SUPER_ADMIN only, list all orgs with counts
 export const GET = withAuth(async (req, { user }) => {
   if ((user.role as UserRole) !== "SUPER_ADMIN") {

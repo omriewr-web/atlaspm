@@ -6,6 +6,8 @@ import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-
 import { getDisplayAddress } from "@/lib/building-matching";
 import { WorkOrderView } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 function mapWorkOrder(wo: any): WorkOrderView {
   return {
     id: wo.id,

@@ -5,6 +5,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { scoreLegalCandidate } from "@/lib/legal-matching";
 
+export const dynamic = "force-dynamic";
+
 // GET — Return tenants who are candidates for legal referral
 export const GET = withAuth(async (req, { user }) => {
   const scope = getTenantScope(user);

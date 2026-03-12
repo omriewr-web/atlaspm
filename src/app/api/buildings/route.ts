@@ -6,6 +6,8 @@ import { buildingCreateSchema } from "@/lib/validations";
 import { getBuildingIdScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { getDisplayAddress } from "@/lib/building-matching";
 
+export const dynamic = "force-dynamic";
+
 interface BuildingAggRow {
   buildingId: string;
   totalMarketRent: number;

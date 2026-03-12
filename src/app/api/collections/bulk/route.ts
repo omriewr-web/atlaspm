@@ -3,6 +3,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { bulkCollectionAction } from "@/lib/services/collections.service";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const bulkSchema = z.object({
   tenantIds: z.array(z.string()).min(1),
   action: z.enum(["change_status", "add_note"]),

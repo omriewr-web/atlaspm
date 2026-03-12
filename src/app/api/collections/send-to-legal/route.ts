@@ -3,6 +3,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { sendToLegal } from "@/lib/services/collections.service";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const schema = z.object({
   tenantId: z.string().min(1),
 });

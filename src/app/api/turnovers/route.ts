@@ -3,6 +3,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
 import { listTurnovers, createTurnover } from "@/lib/services/turnover.service";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const status = url.searchParams.get("status") || undefined;

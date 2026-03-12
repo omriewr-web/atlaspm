@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { tenantRequestSchema } from "@/lib/validations";
 
+export const dynamic = "force-dynamic";
+
 // ── In-memory rate limiter (edge-compatible, resets on deploy) ───
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 5;

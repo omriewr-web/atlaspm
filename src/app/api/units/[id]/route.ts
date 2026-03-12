@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { assertUnitAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const PATCH = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const denied = await assertUnitAccess(user, id);

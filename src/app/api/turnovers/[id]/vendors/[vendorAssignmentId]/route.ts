@@ -4,6 +4,8 @@ import { canAccessBuilding } from "@/lib/data-scope";
 import { getTurnover, updateVendorAssignment } from "@/lib/services/turnover.service";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export const PATCH = withAuth(async (req, { user, params }) => {
   const { id, vendorAssignmentId } = await params;
 

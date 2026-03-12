@@ -3,6 +3,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
 import { getTurnover, addVendorAssignment } from "@/lib/services/turnover.service";
 
+export const dynamic = "force-dynamic";
+
 export const POST = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const turnover = await getTurnover(id);

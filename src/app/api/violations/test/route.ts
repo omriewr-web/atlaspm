@@ -4,6 +4,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { detectBoroId, debugFetchSource } from "@/lib/nyc-open-data";
 import { assertBuildingAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/violations/test?buildingId=xxx
 // or  /api/violations/test?block=02662&lot=0028&boro=2
 // Returns raw debug info: the exact URL called, HTTP status, row count, sample row

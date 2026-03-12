@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { assertWorkOrderAccess } from "@/lib/data-scope";
-import { supabaseAdmin, BUCKET_NAME, validateImageFile, getPublicUrl } from "@/lib/supabase-storage";
+import { getSupabaseAdmin, BUCKET_NAME, validateImageFile, getPublicUrl } from "@/lib/supabase-storage";
+
+export const dynamic = "force-dynamic";
 
 export const POST = withAuth(async (req, { user, params }) => {
   const { id } = await params;
@@ -34,7 +36,7 @@ export const POST = withAuth(async (req, { user, params }) => {
     const path = `work-orders/${id}/${timestamp}-${safeName}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { error: uploadError } = await supabaseAdmin.storage
+    const { error: uploadError } = await getSupabaseAdmin().storage
       .from(BUCKET_NAME)
       .upload(path, buffer, { contentType: file.type, upsert: false });
 

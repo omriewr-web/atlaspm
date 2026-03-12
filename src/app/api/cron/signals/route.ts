@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { withCronAuth } from "@/lib/with-cron-auth";
 import { runSignalScan } from "@/lib/signals/engine";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/cron/signals — triggered by external scheduler (Vercel Cron, etc.)
 // Secured by dedicated CRON_SECRET check via withCronAuth
 export const GET = withCronAuth(async () => {

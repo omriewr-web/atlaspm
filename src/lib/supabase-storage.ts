@@ -1,12 +1,15 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+let _supabaseAdmin: SupabaseClient | null = null;
 
-export const supabaseAdmin =
-  supabaseUrl && supabaseServiceKey
-    ? createClient(supabaseUrl, supabaseServiceKey)
-    : (null as any);
+export function getSupabaseAdmin(): SupabaseClient {
+  if (!_supabaseAdmin) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    _supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  return _supabaseAdmin;
+}
 
 export const BUCKET_NAME = "work-order-photos";
 
@@ -24,7 +27,6 @@ export function validateImageFile(file: File): string | null {
 }
 
 export function getPublicUrl(path: string): string {
-  if (!supabaseAdmin) return "";
-  const { data } = supabaseAdmin.storage.from(BUCKET_NAME).getPublicUrl(path);
+  const { data } = getSupabaseAdmin().storage.from(BUCKET_NAME).getPublicUrl(path);
   return data.publicUrl;
 }

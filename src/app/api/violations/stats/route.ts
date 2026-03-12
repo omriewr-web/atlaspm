@@ -4,6 +4,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import type { ViolationStats } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req: NextRequest, { user }) => {
   const url = new URL(req.url);
   const buildingId = url.searchParams.get("buildingId");

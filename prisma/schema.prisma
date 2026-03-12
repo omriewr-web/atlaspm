@@ -308,6 +308,7 @@ model TenantNote {
   author    User         @relation(fields: [authorId], references: [id])
 
   @@index([tenantId, createdAt(sort: Desc)])
+  @@index([authorId])
   @@map("tenant_notes")
 }
 
@@ -333,6 +334,7 @@ model CommLog {
   author    User     @relation(fields: [authorId], references: [id])
 
   @@index([tenantId, createdAt(sort: Desc)])
+  @@index([authorId])
   @@map("comm_logs")
 }
 
@@ -350,6 +352,7 @@ model Payment {
   recorder   User     @relation(fields: [recordedBy], references: [id])
 
   @@index([tenantId, date(sort: Desc)])
+  @@index([recordedBy])
   @@map("payments")
 }
 
@@ -402,7 +405,11 @@ model LegalCase {
   @@index([stage])
   @@index([status])
   @@index([buildingId])
+  @@index([unitId])
   @@index([collectionCaseId])
+  @@index([assignedUserId])
+  @@index([attorneyId])
+  @@index([marshalId])
   @@index([isActive])
   @@map("legal_cases")
 }
@@ -444,6 +451,7 @@ model LegalNote {
   author      User       @relation(fields: [authorId], references: [id])
 
   @@index([legalCaseId, createdAt(sort: Desc)])
+  @@index([authorId])
   @@map("legal_notes")
 }
 
@@ -461,6 +469,7 @@ model Task {
   createdBy   User      @relation(fields: [createdById], references: [id])
 
   @@index([tenantId])
+  @@index([createdById])
   @@index([dueDate])
   @@map("tasks")
 }
@@ -628,6 +637,11 @@ model WorkOrder {
   inspectionItems InspectionItem[]
 
   @@index([buildingId])
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([vendorId])
   @@index([status])
   @@index([priority])
   @@index([sourceType, sourceId])
@@ -678,6 +692,8 @@ model MaintenanceSchedule {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
+  @@index([buildingId])
+  @@index([unitId])
   @@index([nextDueDate])
   @@map("maintenance_schedules")
 }
@@ -1118,7 +1134,9 @@ model CollectionCase {
   legalCases     LegalCase[]
 
   @@index([buildingId])
+  @@index([unitId])
   @@index([tenantId])
+  @@index([assignedUserId])
   @@index([status])
   @@index([isActive])
   @@map("collection_cases")
@@ -1148,6 +1166,8 @@ model Vacancy {
 
   @@index([buildingId])
   @@index([unitId])
+  @@index([assignedUserId])
+  @@index([brokerId])
   @@index([isActive])
   @@index([stage])
   @@map("vacancies")
@@ -1193,6 +1213,8 @@ model Inspection {
   moveOutAssessments MoveOutAssessment[]
 
   @@index([buildingId])
+  @@index([unitId])
+  @@index([assignedUserId])
   @@index([scheduledFor])
   @@index([overallStatus])
   @@map("inspections")
@@ -1214,6 +1236,8 @@ model InspectionItem {
   generatedWorkOrder   WorkOrder? @relation(fields: [generatedWorkOrderId], references: [id])
 
   @@index([inspectionId])
+  @@index([buildingId])
+  @@index([unitId])
   @@map("inspection_items")
 }
 
@@ -1241,7 +1265,10 @@ model MoveOutAssessment {
   charges                  MoveOutCharge[]
 
   @@index([buildingId])
+  @@index([unitId])
   @@index([tenantId])
+  @@index([assignedUserId])
+  @@index([inspectionId])
   @@map("move_out_assessments")
 }
 
@@ -1264,6 +1291,9 @@ model MoveOutCharge {
   tenant              Tenant            @relation(fields: [tenantId], references: [id])
 
   @@index([moveOutAssessmentId])
+  @@index([buildingId])
+  @@index([unitId])
+  @@index([tenantId])
   @@map("move_out_charges")
 }
 

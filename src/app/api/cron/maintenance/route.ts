@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withCronAuth } from "@/lib/with-cron-auth";
 
+export const dynamic = "force-dynamic";
+
 function advanceDate(date: Date, frequency: string): Date {
   const next = new Date(date);
   switch (frequency) {

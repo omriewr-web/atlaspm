@@ -5,6 +5,8 @@ import { complianceGenerateSchema } from "@/lib/validations";
 import { generateDefaultComplianceItems } from "@/lib/compliance-templates";
 import { assertBuildingAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const POST = withAuth(async (req: NextRequest, { user }) => {
   const { buildingId } = await parseBody(req, complianceGenerateSchema);
 

@@ -3,6 +3,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { analyzeImport } from "@/lib/importer/analyzeImport";
 import { REQUIRED_FIELDS } from "@/lib/importer/headerAliases";
 
+export const dynamic = "force-dynamic";
+
 export const POST = withAuth(async (req: NextRequest, { user }) => {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

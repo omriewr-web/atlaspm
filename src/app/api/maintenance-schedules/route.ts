@@ -4,6 +4,8 @@ import { withAuth, parseBody } from "@/lib/api-helpers";
 import { maintenanceScheduleSchema } from "@/lib/validations";
 import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user }) => {
   const scope = getBuildingScope(user);
   if (scope === EMPTY_SCOPE) return NextResponse.json([]);

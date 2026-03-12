@@ -4,6 +4,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const bulkSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(100),
   action: z.enum(["assign_vendor", "assign_user", "change_status", "change_priority"]),

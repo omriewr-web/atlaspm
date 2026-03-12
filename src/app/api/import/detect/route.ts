@@ -4,6 +4,8 @@ import { parseRentRollExcel } from "@/lib/parsers/rent-roll.parser";
 import { parseARAgingExcel } from "@/lib/parsers/ar-aging.parser";
 import { parseLegalCasesExcel } from "@/lib/parsers/legal-cases.parser";
 
+export const dynamic = "force-dynamic";
+
 export interface DetectResult {
   detected: boolean;
   fileType: "rent_roll" | "ar_aging" | "legal_cases" | "unknown";

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const POST = withAuth(async (req, { user }) => {
   const body = await req.json();
   const { utilityMeterId, accountNumber, assignedPartyType, assignedPartyName, tenantId, startDate, notes } = body;

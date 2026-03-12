@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { normalizeAddress, normalizeBlockLot, extractAddressFromEntity } from "@/lib/building-matching";
 
+export const dynamic = "force-dynamic";
+
 const FORBIDDEN = NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
 // GET /api/buildings/deduplicate?mode=scan

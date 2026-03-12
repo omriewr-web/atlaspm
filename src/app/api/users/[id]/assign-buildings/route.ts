@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import type { UserRole } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"];
 
 export const PATCH = withAuth(async (req, { user, params }) => {

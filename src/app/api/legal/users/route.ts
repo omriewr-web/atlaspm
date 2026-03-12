@@ -7,7 +7,6 @@ import { withAuth } from "@/lib/api-helpers";
 import { getOrgScope } from "@/lib/data-scope";
 import type { UserRole } from "@/types";
 
-
 const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"];
 
 
@@ -38,4 +37,3 @@ export const GET = withAuth(async (req, { user }) => {
 
   return NextResponse.json({ users });
 }, "legal");
-

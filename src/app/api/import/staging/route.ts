@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { commitRentRollImport } from "@/lib/importer/commit";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/import/staging — list staging batches
 export const GET = withAuth(async (req: NextRequest) => {
   const url = new URL(req.url);

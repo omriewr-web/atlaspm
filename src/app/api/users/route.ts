@@ -7,6 +7,8 @@ import { canCreateRole } from "@/lib/permissions";
 import type { UserRole } from "@/types";
 import bcrypt from "bcryptjs";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user }) => {
   const orgScope = getOrgScope(user);
 

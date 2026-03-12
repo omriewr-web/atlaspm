@@ -4,6 +4,8 @@ import { withAuth, parseBody } from "@/lib/api-helpers";
 import { workOrderCommentSchema } from "@/lib/validations";
 import { assertWorkOrderAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const denied = await assertWorkOrderAccess(user, id);

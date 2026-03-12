@@ -7,6 +7,8 @@ import { commitRentRollImport } from "@/lib/importer/commit";
 import { parsedTenantRowSchema } from "@/lib/validations";
 import * as XLSX from "xlsx";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Legacy auto-detect import endpoint.
  *

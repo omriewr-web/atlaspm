@@ -3,6 +3,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { updateCollectionStatus } from "@/lib/services/collections.service";
 import type { CollectionStatus } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export const PATCH = withAuth(async (req, { user, params }) => {
   const { tenantId } = await params;
   const body = await req.json();

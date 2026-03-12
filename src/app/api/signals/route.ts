@@ -5,6 +5,8 @@ import { getOrgScope } from "@/lib/data-scope";
 import { runSignalScan } from "@/lib/signals/engine";
 import type { UserRole } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"];
 
 // GET /api/signals — list signals with filters, scoped by building access

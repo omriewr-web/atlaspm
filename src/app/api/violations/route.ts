@@ -5,6 +5,8 @@ import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 import { getDisplayAddress } from "@/lib/building-matching";
 import type { ViolationView } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 function mapViolation(v: any): ViolationView {
   const respondBy = v.respondByDate ? new Date(v.respondByDate) : null;
   const now = new Date();

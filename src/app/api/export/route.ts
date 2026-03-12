@@ -1,29 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getOrgScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { withAuth } from "@/lib/api-helpers";
+import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
 
-export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
+export const dynamic = "force-dynamic";
 
-  const { searchParams } = new URL(request.url);
-  const buildingId = searchParams.get("buildingId") || undefined;
-  const format = searchParams.get("format") || "csv";
-
-  const user = session.user as any;
-  const scope = getOrgScope(user);
+export const GET = withAuth(async (req, { user }) => {
+  const url = new URL(req.url);
+  const buildingId = url.searchParams.get("buildingId") || undefined;
+  const format = url.searchParams.get("format") || "csv";
+  const scope = getTenantScope(user, buildingId);
 
   if (scope === EMPTY_SCOPE) {
     return new NextResponse("No data", { status: 204 });
   }
 
   const where = {
-    ...scope,
-    ...(buildingId ? { buildingId } : {}),
+    ...(scope as object),
   };
 
   const tenants = await prisma.tenant.findMany({
@@ -46,10 +39,10 @@ export async function GET(request: NextRequest) {
       t.unit?.unitNumber ?? "",
       t.unit?.building?.address ?? "",
       t.balance?.toString() ?? "0",
-      t.monthlyRent?.toString() ?? "0",
-      t.leaseStart ? new Date(t.leaseStart).toLocaleDateString() : "",
-      t.leaseEnd ? new Date(t.leaseEnd).toLocaleDateString() : "",
-      t.status ?? "",
+      (t as any).monthlyRent?.toString() ?? "0",
+      (t as any).leaseStart ? new Date((t as any).leaseStart).toLocaleDateString() : "",
+      (t as any).leaseEnd ? new Date((t as any).leaseEnd).toLocaleDateString() : "",
+      (t as any).status ?? "",
       t.legalCases?.[0]?.inLegal ? "Yes" : "No",
       String(t._count?.notes ?? 0),
     ]);
@@ -63,4 +56,4 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json(tenants);
-}
+});

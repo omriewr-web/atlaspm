@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { assertTenantAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 const SYSTEM_PROMPT = `You are a collections advisor for a NYC property management company. Analyze this tenant's data and return ONLY valid JSON with no extra text:
 { "riskScore": "LOW"|"MEDIUM"|"HIGH"|"CRITICAL", "recommendedAction": "string", "suggestedFollowUpDays": number, "draftNote": "string", "reasoning": "string" }`;
 

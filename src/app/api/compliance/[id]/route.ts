@@ -7,6 +7,8 @@ import { getDisplayAddress } from "@/lib/building-matching";
 import { assertComplianceAccess } from "@/lib/data-scope";
 import type { ComplianceItemView } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 function mapComplianceItem(item: any): ComplianceItemView {
   const nextDue = item.nextDueDate ? new Date(item.nextDueDate) : null;
   const now = new Date();

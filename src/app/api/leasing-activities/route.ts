@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user }) => {
   const url = new URL(req.url);
   const unitId = url.searchParams.get("unitId");

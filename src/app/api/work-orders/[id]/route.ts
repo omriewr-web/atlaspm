@@ -4,6 +4,8 @@ import { withAuth, parseBody } from "@/lib/api-helpers";
 import { workOrderUpdateSchema } from "@/lib/validations";
 import { assertWorkOrderAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 const include = {
   building: { select: { address: true } },
   unit: { select: { unitNumber: true } },

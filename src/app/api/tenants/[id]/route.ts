@@ -5,6 +5,8 @@ import { tenantUpdateSchema } from "@/lib/validations";
 import { getArrearsCategory, getArrearsDays, getLeaseStatus, calcCollectionScore } from "@/lib/scoring";
 import { assertTenantAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const denied = await assertTenantAccess(user, id);

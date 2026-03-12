@@ -5,6 +5,8 @@ import { withAuth } from "@/lib/api-helpers";
 import { LegalStage } from "@prisma/client";
 import { assertTenantAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 const STAGE_MAP: Record<string, LegalStage> = {
   "notice sent": "NOTICE_SENT", "notice": "NOTICE_SENT",
   "holdover": "HOLDOVER", "nonpayment": "NONPAYMENT",

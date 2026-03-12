@@ -7,6 +7,8 @@ import { normalizeAddress } from "@/lib/building-matching";
 import { matchLegalCase, type LegalCaseRow, type TenantRecord, type MatchResult } from "@/lib/legal-matching";
 import { LegalStage } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 const STAGE_MAP: Record<string, LegalStage> = {
   "notice sent": "NOTICE_SENT",
   "notice": "NOTICE_SENT",

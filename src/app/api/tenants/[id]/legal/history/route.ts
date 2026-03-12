@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { assertTenantAccess } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 // GET — all legal cases for a tenant (history), newest first
 export const GET = withAuth(async (req, { user, params }) => {
   const { id } = await params;

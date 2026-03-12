@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const GET = withAuth(async (req, { user }) => {
   const tenantScope = getTenantScope(user);
 

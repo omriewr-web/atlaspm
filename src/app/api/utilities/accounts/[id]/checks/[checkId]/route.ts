@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
 
+export const dynamic = "force-dynamic";
+
 export const PATCH = withAuth(async (req, { user, params }) => {
   const { id, checkId } = await params;
 
