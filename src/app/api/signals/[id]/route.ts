@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
+import { signalUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 // PATCH /api/signals/[id] — acknowledge, resolve, or update fields
 export const PATCH = withAuth(async (req, { user, params }) => {
   const { id } = await params;
-  const body = await req.json();
-  const action = body.action as string | undefined;
+  const body = await parseBody(req, signalUpdateSchema);
+  const action = body.action;
 
   const signal = await prisma.operationalSignal.findUnique({ where: { id } });
   if (!signal) {

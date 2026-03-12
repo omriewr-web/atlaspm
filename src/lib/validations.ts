@@ -477,6 +477,22 @@ export const unitUpdateSchema = z.object({
   askingRent: z.number().min(0).nullable().optional(),
 });
 
+// ── Signal Schema ───────────────────────────────────────────
+
+export const signalUpdateSchema = z.object({
+  action: z.enum(["acknowledge", "resolve"]).optional(),
+  resolutionNote: z.string().nullable().optional(),
+  assignedToUserId: z.string().nullable().optional(),
+  dueAt: z.string().nullable().optional(),
+  snoozedUntil: z.string().nullable().optional(),
+});
+
+// ── Assign Buildings Schema ─────────────────────────────────
+
+export const assignBuildingsSchema = z.object({
+  buildingIds: z.array(z.string()),
+});
+
 // ── Deduplicate Schema ──────────────────────────────────────
 
 export const deduplicateMergeSchema = z.object({

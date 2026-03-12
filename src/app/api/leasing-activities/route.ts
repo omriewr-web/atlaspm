@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
-import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
 import { leasingActivityCreateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +50,9 @@ export const GET = withAuth(async (req, { user }) => {
 
 export const POST = withAuth(async (req, { user }) => {
   const { unitId, buildingId, type, description, contactName, contactInfo } = await parseBody(req, leasingActivityCreateSchema);
+
+  const accessErr = await assertBuildingAccess(user, buildingId);
+  if (accessErr) return accessErr;
 
   const activity = await prisma.leasingActivity.create({
     data: {

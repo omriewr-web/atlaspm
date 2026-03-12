@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
+import { assignBuildingsSchema } from "@/lib/validations";
 import type { UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +14,17 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   }
 
   const { id } = await params;
-  const { buildingIds } = await req.json();
+  const { buildingIds } = await parseBody(req, assignBuildingsSchema);
 
-  if (!Array.isArray(buildingIds)) {
-    return NextResponse.json({ error: "buildingIds must be an array" }, { status: 400 });
+  // Verify target user belongs to same org (unless SUPER_ADMIN)
+  if (user.role !== "SUPER_ADMIN") {
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+      select: { organizationId: true },
+    });
+    if (!targetUser || targetUser.organizationId !== user.organizationId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
   }
 
   // Verify all buildings belong to the same org
