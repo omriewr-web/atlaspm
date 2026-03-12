@@ -63,7 +63,7 @@ model User {
   acknowledgedSignals OperationalSignal[] @relation("SignalAcknowledger")
   resolvedSignals     OperationalSignal[] @relation("SignalResolver")
   scanLogs            SignalScanLog[]
-  assignedTurnovers   TurnoverWorkflow[] @relation("TurnoverAssignee")
+  assignedTurnovers   TurnoverWorkflow[]  @relation("TurnoverAssignee")
   workOrderActivities WorkOrderActivity[] @relation("WorkOrderActivityUser")
   leasingActivities   LeasingActivity[]
 
@@ -208,7 +208,7 @@ model Unit {
   buildingId           String
   unitNumber           String
   unitType             String?
-  unitCategory         String?               // "residential", "commercial", "parking", "laundry", "super", "other"
+  unitCategory         String? // "residential", "commercial", "parking", "laundry", "super", "other"
   askingRent           Decimal?              @db.Decimal(10, 2)
   isVacant             Boolean               @default(false)
   isResidential        Boolean               @default(true)
@@ -579,24 +579,24 @@ enum MaintenanceFrequency {
 }
 
 model Vendor {
-  id                   String           @id @default(cuid())
+  id                   String                     @id @default(cuid())
   name                 String
   company              String?
   email                String?
   phone                String?
   specialty            String?
-  contactType          String           @default("vendor") // vendor | broker | attorney | marshal
-  hourlyRate           Decimal?         @db.Decimal(10, 2)
-  notes                String?          @db.Text
+  contactType          String                     @default("vendor") // vendor | broker | attorney | marshal
+  hourlyRate           Decimal?                   @db.Decimal(10, 2)
+  notes                String?                    @db.Text
   organizationId       String?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
   workOrders           WorkOrder[]
   complianceItems      ComplianceItem[]
-  vacanciesBrokered    Vacancy[]        @relation("VacancyBroker")
-  legalCasesAsAttorney LegalCase[]      @relation("LegalCaseAttorney")
-  legalCasesAsMarshal  LegalCase[]      @relation("LegalCaseMarshal")
-  violationsAssigned   Violation[]      @relation("ViolationVendor")
+  vacanciesBrokered    Vacancy[]                  @relation("VacancyBroker")
+  legalCasesAsAttorney LegalCase[]                @relation("LegalCaseAttorney")
+  legalCasesAsMarshal  LegalCase[]                @relation("LegalCaseMarshal")
+  violationsAssigned   Violation[]                @relation("ViolationVendor")
   turnoverAssignments  TurnoverVendorAssignment[]
 
   @@index([contactType])
@@ -605,15 +605,15 @@ model Vendor {
 }
 
 model WorkOrder {
-  id              String             @id @default(cuid())
+  id              String              @id @default(cuid())
   title           String
-  description     String             @db.Text
-  status          WorkOrderStatus    @default(OPEN)
-  priority        WorkOrderPriority  @default(MEDIUM)
-  category        WorkOrderCategory  @default(GENERAL)
+  description     String              @db.Text
+  status          WorkOrderStatus     @default(OPEN)
+  priority        WorkOrderPriority   @default(MEDIUM)
+  category        WorkOrderCategory   @default(GENERAL)
   photos          Json?
-  estimatedCost   Decimal?           @db.Decimal(10, 2)
-  actualCost      Decimal?           @db.Decimal(10, 2)
+  estimatedCost   Decimal?            @db.Decimal(10, 2)
+  actualCost      Decimal?            @db.Decimal(10, 2)
   scheduledDate   DateTime?
   completedDate   DateTime?
   buildingId      String
@@ -625,14 +625,14 @@ model WorkOrder {
   sourceType      String? // manual | inspection | violation | vacancy | move_out
   sourceId        String?
   dueDate         DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  building        Building           @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  unit            Unit?              @relation(fields: [unitId], references: [id])
-  tenant          Tenant?            @relation(fields: [tenantId], references: [id])
-  vendor          Vendor?            @relation(fields: [vendorId], references: [id])
-  assignedTo      User?              @relation("WorkOrderAssignee", fields: [assignedToId], references: [id])
-  createdBy       User?              @relation("WorkOrderCreator", fields: [createdById], references: [id])
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  building        Building            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit            Unit?               @relation(fields: [unitId], references: [id])
+  tenant          Tenant?             @relation(fields: [tenantId], references: [id])
+  vendor          Vendor?             @relation(fields: [vendorId], references: [id])
+  assignedTo      User?               @relation("WorkOrderAssignee", fields: [assignedToId], references: [id])
+  createdBy       User?               @relation("WorkOrderCreator", fields: [createdById], references: [id])
   comments        WorkOrderComment[]
   activities      WorkOrderActivity[]
   violations      Violation[]
@@ -668,7 +668,7 @@ model WorkOrderActivity {
   id          String    @id @default(cuid())
   workOrderId String
   userId      String?
-  action      String    // status_changed, priority_changed, vendor_assigned, user_assigned, due_date_set, completed
+  action      String // status_changed, priority_changed, vendor_assigned, user_assigned, due_date_set, completed
   fromValue   String?
   toValue     String?
   createdAt   DateTime  @default(now())
@@ -1186,7 +1186,7 @@ model LeasingActivity {
   unitId      String
   buildingId  String
   userId      String
-  type        String   // showing, application, follow_up, offer_sent, lease_signed, inquiry, note
+  type        String // showing, application, follow_up, offer_sent, lease_signed, inquiry, note
   description String?  @db.Text
   contactName String?
   contactInfo String?
@@ -1457,21 +1457,21 @@ model ARSnapshot {
 // ── Utility Meter & Account Compliance ───────────────────────────
 
 model UtilityMeter {
-  id              String   @id @default(cuid())
-  buildingId      String
-  unitId          String?
-  utilityType     String   // "electric" | "gas" | "water" | "common_electric" | "common_gas"
-  providerName    String?
-  meterNumber     String?
-  serviceAddress  String?
-  isActive        Boolean  @default(true)
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  buildingId     String
+  unitId         String?
+  utilityType    String // "electric" | "gas" | "water" | "common_electric" | "common_gas"
+  providerName   String?
+  meterNumber    String?
+  serviceAddress String?
+  isActive       Boolean  @default(true)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  building        Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  unit            Unit?             @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  accounts        UtilityAccount[]
+  building Building         @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit     Unit?            @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  accounts UtilityAccount[]
 
   @@index([buildingId])
   @@index([unitId])
@@ -1479,23 +1479,23 @@ model UtilityMeter {
 }
 
 model UtilityAccount {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   utilityMeterId    String
   accountNumber     String?
-  assignedPartyType String   // "tenant" | "owner" | "management" | "unknown"
+  assignedPartyType String // "tenant" | "owner" | "management" | "unknown"
   assignedPartyName String?
   tenantId          String?
   startDate         DateTime?
   endDate           DateTime?
-  status            String   @default("active") // "active" | "closed" | "pending"
+  status            String    @default("active") // "active" | "closed" | "pending"
   closedWithBalance Boolean?
   notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  meter             UtilityMeter           @relation(fields: [utilityMeterId], references: [id], onDelete: Cascade)
-  tenant            Tenant?                @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-  monthlyChecks     UtilityMonthlyCheck[]
+  meter         UtilityMeter          @relation(fields: [utilityMeterId], references: [id], onDelete: Cascade)
+  tenant        Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  monthlyChecks UtilityMonthlyCheck[]
 
   @@index([utilityMeterId])
   @@index([tenantId])
@@ -1508,14 +1508,14 @@ model UtilityMonthlyCheck {
   utilityAccountId String
   month            Int
   year             Int
-  paymentStatus    String    // "paid" | "unpaid" | "pending_verification" | "unknown" | "no_bill"
+  paymentStatus    String // "paid" | "unpaid" | "pending_verification" | "unknown" | "no_bill"
   verifiedBy       String?
   verifiedAt       DateTime?
   proofFileUrl     String?
   notes            String?
   createdAt        DateTime  @default(now())
 
-  account          UtilityAccount @relation(fields: [utilityAccountId], references: [id], onDelete: Cascade)
+  account UtilityAccount @relation(fields: [utilityAccountId], references: [id], onDelete: Cascade)
 
   @@unique([utilityAccountId, month, year])
   @@map("utility_monthly_checks")
@@ -1526,11 +1526,11 @@ model UtilityMonthlyCheck {
 model OperationalSignal {
   id                String    @id @default(cuid())
   deduplicationKey  String    @unique // e.g. "collections-risk-high-[tenantId]"
-  type              String    // collections_risk | legal_escalation | vacancy_risk | violation_risk | maintenance_failure | lease_expiration | utility_problem
-  severity          String    // low | medium | high | critical
+  type              String // collections_risk | legal_escalation | vacancy_risk | violation_risk | maintenance_failure | lease_expiration | utility_problem
+  severity          String // low | medium | high | critical
   title             String
   description       String    @db.Text
-  entityType        String    // tenant | building | unit | workorder | violation | lease | meter | complaint
+  entityType        String // tenant | building | unit | workorder | violation | lease | meter | complaint
   entityId          String
   buildingId        String?
   tenantId          String?
@@ -1564,20 +1564,22 @@ model OperationalSignal {
 }
 
 model SignalScanLog {
-  id              String   @id @default(cuid())
-  scanType        String   // manual | scheduled
+  id              String    @id @default(cuid())
+  scanType        String // manual | scheduled
   triggeredById   String?
   organizationId  String?
-  startedAt       DateTime @default(now())
+  startedAt       DateTime  @default(now())
   completedAt     DateTime?
   durationMs      Int?
-  success         Boolean  @default(true)
-  errorMessage    String?  @db.Text
-  createdSignals  Int      @default(0)
-  updatedSignals  Int      @default(0)
-  resolvedSignals Int      @default(0)
-  triggeredBy     User?    @relation(fields: [triggeredById], references: [id])
+  success         Boolean   @default(true)
+  errorMessage    String?   @db.Text
+  createdSignals  Int       @default(0)
+  updatedSignals  Int       @default(0)
+  resolvedSignals Int       @default(0)
+  triggeredBy     User?     @relation(fields: [triggeredById], references: [id])
 
+  @@index([triggeredById])
+  @@index([organizationId])
   @@index([startedAt])
   @@map("signal_scan_logs")
 }
@@ -1606,29 +1608,29 @@ enum TurnoverVendorStatus {
 }
 
 model TurnoverWorkflow {
-  id                  String              @id @default(cuid())
+  id                  String          @id @default(cuid())
   unitId              String
   buildingId          String
-  triggeredBy         TurnoverTrigger     @default(MANUAL)
+  triggeredBy         TurnoverTrigger @default(MANUAL)
   moveOutDate         DateTime?
-  moveOutSource       String?             // "LEASE_END" | "MANUAL"
-  status              TurnoverStatus      @default(PENDING_INSPECTION)
+  moveOutSource       String? // "LEASE_END" | "MANUAL"
+  status              TurnoverStatus  @default(PENDING_INSPECTION)
   inspectionDate      DateTime?
-  inspectionNotes     String?             @db.Text
+  inspectionNotes     String?         @db.Text
   inspectionChecklist Json?
-  scopeOfWork         String?             @db.Text
-  estimatedCost       Decimal?            @db.Decimal(10, 2)
+  scopeOfWork         String?         @db.Text
+  estimatedCost       Decimal?        @db.Decimal(10, 2)
   listedDate          DateTime?
   completedAt         DateTime?
   assignedToUserId    String?
-  isActive            Boolean             @default(true)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  isActive            Boolean         @default(true)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
-  unit                Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  building            Building            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  assignedTo          User?               @relation("TurnoverAssignee", fields: [assignedToUserId], references: [id])
-  vendorAssignments   TurnoverVendorAssignment[]
+  unit              Unit                       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  building          Building                   @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  assignedTo        User?                      @relation("TurnoverAssignee", fields: [assignedToUserId], references: [id])
+  vendorAssignments TurnoverVendorAssignment[]
 
   @@index([unitId])
   @@index([buildingId])
@@ -1639,32 +1641,33 @@ model TurnoverWorkflow {
 }
 
 model TurnoverVendorAssignment {
-  id                  String              @id @default(cuid())
-  turnoverWorkflowId  String
-  vendorId            String?
-  vendorName          String
-  trade               String              // paint, plumbing, electric, hvac, flooring, general, cleaning, other
-  status              TurnoverVendorStatus @default(PENDING)
-  scheduledDate       DateTime?
-  completedDate       DateTime?
-  cost                Decimal?            @db.Decimal(10, 2)
-  notes               String?             @db.Text
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  id                 String               @id @default(cuid())
+  turnoverWorkflowId String
+  vendorId           String?
+  vendorName         String
+  trade              String // paint, plumbing, electric, hvac, flooring, general, cleaning, other
+  status             TurnoverVendorStatus @default(PENDING)
+  scheduledDate      DateTime?
+  completedDate      DateTime?
+  cost               Decimal?             @db.Decimal(10, 2)
+  notes              String?              @db.Text
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
-  turnoverWorkflow    TurnoverWorkflow    @relation(fields: [turnoverWorkflowId], references: [id], onDelete: Cascade)
-  vendor              Vendor?             @relation(fields: [vendorId], references: [id])
+  turnoverWorkflow TurnoverWorkflow @relation(fields: [turnoverWorkflowId], references: [id], onDelete: Cascade)
+  vendor           Vendor?          @relation(fields: [vendorId], references: [id])
 
   @@index([turnoverWorkflowId])
+  @@index([vendorId])
   @@map("turnover_vendor_assignments")
 }
 
 model SnoozedAction {
-  id          String   @id @default(cuid())
-  actionKey   String   // deterministic key e.g. "signal-[signalId]"
-  userId      String
+  id           String   @id @default(cuid())
+  actionKey    String // deterministic key e.g. "signal-[signalId]"
+  userId       String
   snoozedUntil DateTime
-  createdAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   @@unique([actionKey, userId])
   @@index([userId, snoozedUntil])
