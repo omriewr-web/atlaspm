@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, parseBody } from "@/lib/api-helpers";
 import { vendorCreateSchema } from "@/lib/validations";
+import { getOrgScope } from "@/lib/data-scope";
 
-export const GET = withAuth(async (req) => {
+export const GET = withAuth(async (req, { user }) => {
   const { searchParams } = new URL(req.url);
   const buildingId = searchParams.get("buildingId");
+  const orgScope = getOrgScope(user);
 
-  // Vendor model has no buildingId — filter by vendors with work orders in that building
-  const where = buildingId
-    ? { workOrders: { some: { buildingId } } }
-    : {};
+  const where: any = { ...orgScope };
+  if (buildingId) {
+    where.workOrders = { some: { buildingId } };
+  }
+
   const vendors = await prisma.vendor.findMany({ where, orderBy: { name: "asc" } });
   return NextResponse.json(
     vendors.map((v) => ({
@@ -20,8 +23,10 @@ export const GET = withAuth(async (req) => {
   );
 }, "maintenance");
 
-export const POST = withAuth(async (req) => {
+export const POST = withAuth(async (req, { user }) => {
   const data = await parseBody(req, vendorCreateSchema);
-  const vendor = await prisma.vendor.create({ data: data as any });
+  const vendor = await prisma.vendor.create({
+    data: { ...(data as any), organizationId: user.organizationId },
+  });
   return NextResponse.json(vendor, { status: 201 });
 }, "maintenance");

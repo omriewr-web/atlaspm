@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Users, Plus } from "lucide-react";
 import { useUsers, useDeleteUser } from "@/hooks/use-users";
+import { useAllBuildings } from "@/hooks/use-buildings";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -11,19 +12,41 @@ import UserFormModal from "@/components/users/user-form-modal";
 import { formatDate } from "@/lib/utils";
 
 const roleBadgeColor: Record<string, string> = {
+  SUPER_ADMIN: "red",
   ADMIN: "red",
+  ACCOUNT_ADMIN: "red",
   PM: "blue",
+  APM: "blue",
   COLLECTOR: "green",
   OWNER: "amber",
+  LEASING_SPECIALIST: "purple",
   BROKER: "purple",
+  SUPER: "gray",
+  ACCOUNTING: "green",
+  LEASING_AGENT: "purple",
 };
 
 export default function UsersContent() {
   const { data: users, isLoading } = useUsers();
+  const { data: buildings } = useAllBuildings();
   const deleteUser = useDeleteUser();
   const [mode, setMode] = useState<"create" | "edit" | null>(null);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // PM users to serve as managers for APM/Leasing/Accounting roles
+  const managers = useMemo(() => {
+    if (!users) return [];
+    return users
+      .filter((u: any) => ["PM", "ADMIN", "ACCOUNT_ADMIN"].includes(u.role) && u.active)
+      .map((u: any) => ({ id: u.id, name: u.name }));
+  }, [users]);
+
+  // Buildings list for assignment
+  const buildingList = useMemo(() => {
+    if (!buildings) return [];
+    return buildings.map((b: any) => ({ id: b.id, address: b.address }));
+  }, [buildings]);
 
   if (isLoading) return <PageSkeleton />;
 
@@ -44,6 +67,7 @@ export default function UsersContent() {
               <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Email</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Username</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Role</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Manager</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Status</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-text-dim uppercase">Created</th>
               <th className="px-3 py-2 text-right text-xs font-medium text-text-dim uppercase">Actions</th>
@@ -58,6 +82,7 @@ export default function UsersContent() {
                 <td className="px-3 py-2">
                   <Badge variant={roleBadgeColor[u.role] as any}>{u.role}</Badge>
                 </td>
+                <td className="px-3 py-2 text-text-dim text-xs">{u.manager?.name || "—"}</td>
                 <td className="px-3 py-2">
                   <Badge variant={u.active ? "green" : "gray"}>{u.active ? "Active" : "Inactive"}</Badge>
                 </td>
@@ -87,6 +112,8 @@ export default function UsersContent() {
           user={mode === "edit" ? editingUser : null}
           mode={mode}
           onClose={() => { setMode(null); setEditingUser(null); }}
+          managers={managers}
+          buildings={buildingList}
         />
       )}
 

@@ -54,7 +54,7 @@ export const GET = withAuth(async (req, { user }) => {
 
     (async () => {
       // Scope pendingReview to tenants the user can access
-      if (user.role === "ADMIN") {
+      if (["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"].includes(user.role)) {
         return prisma.legalImportQueue.count({ where: { status: "pending" } });
       }
       const assigned = user.assignedProperties ?? [];

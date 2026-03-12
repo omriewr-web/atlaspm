@@ -2,7 +2,11 @@
  * Centralized data scoping for authorization.
  *
  * DEFAULT DENY: non-admin users with no assigned properties see NOTHING.
- * Admin users see everything. Non-admin with assignments see only their buildings.
+ * Admin-level roles see all buildings within their org.
+ * SUPER_ADMIN sees everything across all orgs.
+ * Non-admin with assignments see only their buildings.
+ * Roles with managers (APM, LEASING_SPECIALIST, ACCOUNTING) inherit
+ * their manager's buildings — resolved at login time in auth.ts.
  */
 
 import { NextResponse } from "next/server";
@@ -11,12 +15,26 @@ import { prisma } from "./prisma";
 interface ScopeUser {
   role: string;
   assignedProperties?: string[] | null;
+  organizationId?: string;
 }
+
+// Roles that have full access to all buildings within their org
+const FULL_ORG_ROLES = ["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"];
 
 /** Sentinel value: when returned, the route should return an empty result set. */
 export const EMPTY_SCOPE = Symbol("EMPTY_SCOPE");
 
 type ScopeResult = { buildingId: { in: string[] } } | Record<string, never> | typeof EMPTY_SCOPE;
+
+/**
+ * Returns an org-level Prisma where clause fragment.
+ * SUPER_ADMIN gets no filter (sees all orgs).
+ * All other roles get { organizationId: user.organizationId }.
+ */
+export function getOrgScope(user: ScopeUser): Record<string, string> | Record<string, never> {
+  if (user.role === "SUPER_ADMIN") return {};
+  return { organizationId: user.organizationId || "org_default" };
+}
 
 /**
  * Returns a Prisma where clause fragment for building-level queries.
@@ -26,8 +44,7 @@ type ScopeResult = { buildingId: { in: string[] } } | Record<string, never> | ty
  */
 export function getBuildingScope(user: ScopeUser, explicitBuildingId?: string | null): ScopeResult {
   if (explicitBuildingId) {
-    // Even with an explicit ID, non-admin users must own it
-    if (user.role === "ADMIN") {
+    if (FULL_ORG_ROLES.includes(user.role)) {
       return { buildingId: { in: [explicitBuildingId] } };
     }
     const assigned = user.assignedProperties ?? [];
@@ -37,7 +54,7 @@ export function getBuildingScope(user: ScopeUser, explicitBuildingId?: string | 
     return { buildingId: { in: [explicitBuildingId] } };
   }
 
-  if (user.role === "ADMIN") return {};
+  if (FULL_ORG_ROLES.includes(user.role)) return {};
 
   const assigned = user.assignedProperties ?? [];
   if (assigned.length === 0) return EMPTY_SCOPE;
@@ -50,7 +67,7 @@ export function getBuildingScope(user: ScopeUser, explicitBuildingId?: string | 
  */
 export function getBuildingIdScope(user: ScopeUser, explicitBuildingId?: string | null) {
   if (explicitBuildingId) {
-    if (user.role === "ADMIN") {
+    if (FULL_ORG_ROLES.includes(user.role)) {
       return { id: explicitBuildingId };
     }
     const assigned = user.assignedProperties ?? [];
@@ -60,7 +77,7 @@ export function getBuildingIdScope(user: ScopeUser, explicitBuildingId?: string 
     return { id: explicitBuildingId };
   }
 
-  if (user.role === "ADMIN") return {};
+  if (FULL_ORG_ROLES.includes(user.role)) return {};
 
   const assigned = user.assignedProperties ?? [];
   if (assigned.length === 0) return EMPTY_SCOPE;
@@ -73,7 +90,7 @@ export function getBuildingIdScope(user: ScopeUser, explicitBuildingId?: string 
  */
 export function getTenantScope(user: ScopeUser, explicitBuildingId?: string | null) {
   if (explicitBuildingId) {
-    if (user.role === "ADMIN") {
+    if (FULL_ORG_ROLES.includes(user.role)) {
       return { unit: { buildingId: explicitBuildingId } };
     }
     const assigned = user.assignedProperties ?? [];
@@ -83,7 +100,7 @@ export function getTenantScope(user: ScopeUser, explicitBuildingId?: string | nu
     return { unit: { buildingId: explicitBuildingId } };
   }
 
-  if (user.role === "ADMIN") return {};
+  if (FULL_ORG_ROLES.includes(user.role)) return {};
 
   const assigned = user.assignedProperties ?? [];
   if (assigned.length === 0) return EMPTY_SCOPE;
@@ -95,7 +112,7 @@ export function getTenantScope(user: ScopeUser, explicitBuildingId?: string | nu
 
 /** Check if a user can access a specific building */
 export function canAccessBuilding(user: ScopeUser, buildingId: string): boolean {
-  if (user.role === "ADMIN") return true;
+  if (FULL_ORG_ROLES.includes(user.role)) return true;
   const assigned = user.assignedProperties ?? [];
   return assigned.includes(buildingId);
 }

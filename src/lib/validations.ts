@@ -100,20 +100,26 @@ export const buildingCreateSchema = z.object({
 
 export const buildingUpdateSchema = buildingCreateSchema.partial();
 
+const allRoles = ["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN", "PM", "APM", "COLLECTOR", "OWNER", "LEASING_SPECIALIST", "BROKER", "SUPER", "ACCOUNTING", "LEASING_AGENT"] as const;
+
 export const userCreateSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   username: z.string().min(3),
   password: z.string().min(6),
-  role: z.enum(["ADMIN", "PM", "COLLECTOR", "OWNER", "BROKER"]).default("COLLECTOR"),
+  role: z.enum(allRoles).default("COLLECTOR"),
+  managerId: z.string().nullable().optional(),
+  buildingIds: z.array(z.string()).optional(),
 });
 
 export const userUpdateSchema = z.object({
   email: z.string().email().optional(),
   name: z.string().min(1).optional(),
-  role: z.enum(["ADMIN", "PM", "COLLECTOR", "OWNER", "BROKER"]).optional(),
+  role: z.enum(allRoles).optional(),
   active: z.boolean().optional(),
   password: z.string().min(6).optional(),
+  managerId: z.string().nullable().optional(),
+  buildingIds: z.array(z.string()).optional(),
 });
 
 export const workOrderCreateSchema = z.object({

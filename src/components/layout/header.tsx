@@ -3,6 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { LogOut, Building2, Brain, Menu } from "lucide-react";
 import { useAppStore } from "@/stores/app-store";
+import OrgSwitcher from "./org-switcher";
 
 export default function Header() {
   const { data: session } = useSession();
@@ -25,6 +26,7 @@ export default function Header() {
         <span className="text-xs text-text-dim hidden sm:inline">Property Management</span>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
+        <OrgSwitcher />
         <button
           onClick={() => setAiPanelOpen(true)}
           aria-label="Open AI Assistant"

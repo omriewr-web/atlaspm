@@ -10,6 +10,7 @@ declare module "next-auth" {
       role: UserRole;
       assignedProperties: string[];
       organizationId: string;
+      managerId: string | null;
     };
   }
 
@@ -18,6 +19,7 @@ declare module "next-auth" {
     role: UserRole;
     assignedProperties: string[];
     organizationId: string;
+    managerId: string | null;
   }
 }
 
@@ -27,5 +29,6 @@ declare module "next-auth/jwt" {
     role: UserRole;
     assignedProperties: string[];
     organizationId: string;
+    managerId: string | null;
   }
 }

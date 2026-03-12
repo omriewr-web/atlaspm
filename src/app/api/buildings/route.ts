@@ -207,6 +207,8 @@ function sanitizeJsonFields(data: any) {
 
 export const POST = withAuth(async (req, { user }) => {
   const data = await parseBody(req, buildingCreateSchema);
-  const building = await prisma.building.create({ data: sanitizeJsonFields(data) });
+  const sanitized = sanitizeJsonFields(data);
+  sanitized.organizationId = user.organizationId;
+  const building = await prisma.building.create({ data: sanitized });
   return NextResponse.json(building, { status: 201 });
 }, "upload");

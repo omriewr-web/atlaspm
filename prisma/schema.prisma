@@ -12,11 +12,17 @@ datasource db {
 }
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
+  ACCOUNT_ADMIN
   PM
+  APM
   COLLECTOR
   OWNER
+  LEASING_SPECIALIST
   BROKER
+  SUPER
+  ACCOUNTING
   LEASING_AGENT
 }
 
@@ -28,8 +34,13 @@ model User {
   passwordHash        String
   role                UserRole            @default(COLLECTOR)
   active              Boolean             @default(true)
+  organizationId      String?
+  managerId           String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
+  organization        Organization?       @relation(fields: [organizationId], references: [id])
+  manager             User?               @relation("UserManager", fields: [managerId], references: [id])
+  subordinates        User[]              @relation("UserManager")
   assignedProperties  UserProperty[]
   notes               TenantNote[]
   commLogs            CommLog[]
@@ -56,6 +67,8 @@ model User {
   workOrderActivities WorkOrderActivity[] @relation("WorkOrderActivityUser")
   leasingActivities   LeasingActivity[]
 
+  @@index([organizationId])
+  @@index([managerId])
   @@map("users")
 }
 
@@ -564,6 +577,7 @@ model Vendor {
   contactType          String           @default("vendor") // vendor | broker | attorney | marshal
   hourlyRate           Decimal?         @db.Decimal(10, 2)
   notes                String?          @db.Text
+  organizationId       String?
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   workOrders           WorkOrder[]
@@ -575,6 +589,7 @@ model Vendor {
   turnoverAssignments  TurnoverVendorAssignment[]
 
   @@index([contactType])
+  @@index([organizationId])
   @@map("vendors")
 }
 
@@ -1054,8 +1069,11 @@ model Organization {
   id             String          @id @default(cuid())
   name           String
   slug           String          @unique
+  plan           String          @default("trial")
+  isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  users          User[]
   buildings      Building[]
   activityEvents ActivityEvent[]
 
@@ -1476,6 +1494,7 @@ model OperationalSignal {
   entityId          String
   buildingId        String?
   tenantId          String?
+  organizationId    String?
   status            String    @default("active") // active | acknowledged | resolved
   lastTriggeredAt   DateTime  @default(now())
   acknowledgedAt    DateTime?
@@ -1507,6 +1526,7 @@ model SignalScanLog {
   id              String   @id @default(cuid())
   scanType        String   // manual | scheduled
   triggeredById   String?
+  organizationId  String?
   startedAt       DateTime @default(now())
   completedAt     DateTime?
   durationMs      Int?

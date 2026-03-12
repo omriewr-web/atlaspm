@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
+import { getOrgScope } from "@/lib/data-scope";
 import { runSignalScan } from "@/lib/signals/engine";
+import type { UserRole } from "@/types";
+
+const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"];
 
 // GET /api/signals — list signals with filters, scoped by building access
 export const GET = withAuth(async (req, { user }) => {
@@ -11,7 +15,8 @@ export const GET = withAuth(async (req, { user }) => {
   const buildingId = url.searchParams.get("buildingId");
   const status = url.searchParams.get("status") || "active";
 
-  const where: any = {};
+  const orgScope = getOrgScope(user);
+  const where: any = { ...orgScope };
   if (status !== "all") {
     where.status = status;
   }
@@ -20,7 +25,7 @@ export const GET = withAuth(async (req, { user }) => {
   if (buildingId) where.buildingId = buildingId;
 
   // Scope by building access for non-admin users
-  if (user.role !== "ADMIN") {
+  if (!ADMIN_ROLES.includes(user.role as UserRole)) {
     const assigned = user.assignedProperties ?? [];
     if (assigned.length === 0) {
       return NextResponse.json({ signals: [], counts: { critical: 0, high: 0, medium: 0, low: 0, total: 0 } });
@@ -51,6 +56,7 @@ export const GET = withAuth(async (req, { user }) => {
 
   // Fetch last scan log
   const lastScan = await prisma.signalScanLog.findFirst({
+    where: orgScope,
     orderBy: { startedAt: "desc" },
     select: {
       scanType: true,
@@ -70,7 +76,7 @@ export const GET = withAuth(async (req, { user }) => {
 
 // POST /api/signals — trigger a scan (admin only)
 export const POST = withAuth(async (req, { user }) => {
-  if (user.role !== "ADMIN") {
+  if (!ADMIN_ROLES.includes(user.role as UserRole)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const result = await runSignalScan("manual", user.id);

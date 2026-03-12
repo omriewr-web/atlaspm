@@ -10,7 +10,7 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
   if (body.buildingId) {
     const denied = await assertBuildingAccess(user, body.buildingId);
     if (denied) return denied;
-  } else if (user.role !== "ADMIN") {
+  } else if (!["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -591,7 +591,77 @@ async function main() {
     console.log(`── Utility meters: ${meterCount} already exist, skipping ──`);
   }
 
-  // ── 11. SIGNAL SCAN ──
+  // ── 11. DEMO USERS FOR ALL ROLES ──
+  console.log("\n── Seeding demo users for all roles ──");
+
+  // Ensure default org exists
+  await prisma.organization.upsert({
+    where: { id: "org_default" },
+    update: {},
+    create: { id: "org_default", name: "Default Organization", slug: "default", plan: "trial", isActive: true },
+  });
+
+  const demoPassword = await bcrypt.hash("Atlas2026!", 12);
+
+  // Get building IDs for assignment
+  const allBuildings = await prisma.building.findMany({
+    where: { organizationId: "org_default" },
+    select: { id: true },
+    orderBy: { address: "asc" },
+  });
+  const buildingIds = allBuildings.map((b) => b.id);
+
+  const demoUsers = [
+    { id: "seed-user-superadmin", email: "superadmin@atlaspm.com", name: "Platform Admin", username: "superadmin", role: "SUPER_ADMIN" as const, managerId: null, buildings: [] as string[] },
+    { id: "seed-user-accountadmin", email: "admin@atlaspm.com", name: "Account Admin", username: "accountadmin", role: "ACCOUNT_ADMIN" as const, managerId: null, buildings: [] as string[] },
+    { id: "seed-user-pm", email: "pm@atlaspm.com", name: "Sarah Johnson (PM)", username: "pmjohnson", role: "PM" as const, managerId: null, buildings: buildingIds.slice(0, 40) },
+    { id: "seed-user-apm", email: "apm@atlaspm.com", name: "Mike Chen (APM)", username: "apmchen", role: "APM" as const, managerId: "seed-user-pm", buildings: [] as string[] },
+    { id: "seed-user-owner", email: "owner@atlaspm.com", name: "Robert Klein (Owner)", username: "ownerklein", role: "OWNER" as const, managerId: null, buildings: buildingIds.slice(0, 10) },
+    { id: "seed-user-leasing", email: "leasing@atlaspm.com", name: "Jessica Rivera (Leasing)", username: "leasingrivera", role: "LEASING_SPECIALIST" as const, managerId: "seed-user-pm", buildings: [] as string[] },
+    { id: "seed-user-broker", email: "broker@atlaspm.com", name: "David Park (Broker)", username: "brokerpark", role: "BROKER" as const, managerId: null, buildings: buildingIds.slice(0, 5) },
+    { id: "seed-user-super", email: "super@atlaspm.com", name: "Tony Russo (Super)", username: "superrusso", role: "SUPER" as const, managerId: null, buildings: buildingIds.slice(0, 3) },
+    { id: "seed-user-accounting", email: "accounting@atlaspm.com", name: "Linda Torres (Accounting)", username: "accountingtorres", role: "ACCOUNTING" as const, managerId: "seed-user-pm", buildings: [] as string[] },
+  ];
+
+  for (const u of demoUsers) {
+    await prisma.user.upsert({
+      where: { id: u.id },
+      update: { role: u.role, managerId: u.managerId, organizationId: "org_default" },
+      create: {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        username: u.username,
+        passwordHash: demoPassword,
+        role: u.role,
+        active: true,
+        organizationId: "org_default",
+        managerId: u.managerId,
+      },
+    });
+
+    // Assign buildings
+    if (u.buildings.length > 0) {
+      // Clear existing assignments for this user
+      await prisma.userProperty.deleteMany({ where: { userId: u.id } });
+      await prisma.userProperty.createMany({
+        data: u.buildings.map((bid) => ({ userId: u.id, buildingId: bid })),
+        skipDuplicates: true,
+      });
+    }
+
+    console.log(`  ✓ ${u.role.padEnd(20)} ${u.email.padEnd(30)} (${u.name})`);
+  }
+
+  console.log("\n┌──────────────────────────────────────────────────────┐");
+  console.log("│  Demo User Credentials (all use password: Atlas2026!)│");
+  console.log("├──────────────────────────────────────────────────────┤");
+  for (const u of demoUsers) {
+    console.log(`│  ${u.role.padEnd(20)} ${u.email.padEnd(30)} │`);
+  }
+  console.log("└──────────────────────────────────────────────────────┘");
+
+  // ── 12. SIGNAL SCAN ──
   console.log("\n── Running Coeus signal scan ──");
   try {
     // Dynamic import to avoid TS path resolution issues in seed context

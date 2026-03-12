@@ -7,7 +7,7 @@ const FORBIDDEN = NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
 // GET /api/buildings/deduplicate?mode=scan
 export const GET = withAuth(async (req: NextRequest, { user }) => {
-  if (user.role !== "ADMIN") return FORBIDDEN;
+  if (!["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"].includes(user.role)) return FORBIDDEN;
   const buildings = await prisma.building.findMany({
     select: {
       id: true,
@@ -222,7 +222,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
 
 // POST /api/buildings/deduplicate — merge duplicates
 export const POST = withAuth(async (req: NextRequest, { user }) => {
-  if (user.role !== "ADMIN") return FORBIDDEN;
+  if (!["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"].includes(user.role)) return FORBIDDEN;
   const body = await req.json();
   const { keepId, mergeIds } = body as { keepId: string; mergeIds: string[] };
 
@@ -340,7 +340,7 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
 
 // PUT /api/buildings/deduplicate — auto-scan + auto-merge all duplicates in one call
 export const PUT = withAuth(async (req: NextRequest, { user }) => {
-  if (user.role !== "ADMIN") return FORBIDDEN;
+  if (!["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"].includes(user.role)) return FORBIDDEN;
   // Step 1: Scan (same logic as GET)
   const buildings = await prisma.building.findMany({
     select: {
