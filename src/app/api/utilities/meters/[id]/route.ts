@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
+import { parseBody } from "@/lib/api-helpers";
+import { utilityMeterUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +29,7 @@ export const GET = withAuth(async (req, { user, params }) => {
   });
 
   if (!meter) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, meter.buildingId)) {
+  if (!(await canAccessBuilding(user, meter.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -41,12 +43,11 @@ export const PATCH = withAuth(async (req, { user, params }) => {
     select: { buildingId: true },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, existing.buildingId)) {
+  if (!(await canAccessBuilding(user, existing.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { utilityType, providerName, meterNumber, serviceAddress, isActive, notes, unitId } = body;
+  const { utilityType, providerName, meterNumber, serviceAddress, isActive, notes, unitId } = await parseBody(req, utilityMeterUpdateSchema);
 
   const meter = await prisma.utilityMeter.update({
     where: { id },
@@ -71,7 +72,7 @@ export const DELETE = withAuth(async (req, { user, params }) => {
     select: { buildingId: true },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, existing.buildingId)) {
+  if (!(await canAccessBuilding(user, existing.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

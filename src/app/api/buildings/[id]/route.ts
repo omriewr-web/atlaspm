@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { assertBuildingAccess } from "@/lib/data-scope";
+import { buildingUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,10 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const denied = await assertBuildingAccess(user, id);
   if (denied) return denied;
-  const body = await req.json();
+  const validated = await parseBody(req, buildingUpdateSchema);
   // Convert null JSON fields to Prisma.DbNull
   const jsonFields = ["superintendent", "elevatorCompany", "fireAlarmCompany", "utilityMeters", "utilityAccounts", "lifeSafety", "elevatorInfo", "boilerInfo", "complianceDates"];
-  const data = { ...body };
+  const data: Record<string, unknown> = { ...validated };
   for (const field of jsonFields) {
     if (field in data && data[field] === null) {
       data[field] = Prisma.DbNull;

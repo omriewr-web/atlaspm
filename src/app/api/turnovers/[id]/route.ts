@@ -10,7 +10,7 @@ export const GET = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const turnover = await getTurnover(id);
   if (!turnover) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, turnover.buildingId)) {
+  if (!(await canAccessBuilding(user, turnover.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return NextResponse.json(turnover);
@@ -20,7 +20,7 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   const { id } = await params;
   const turnover = await getTurnover(id);
   if (!turnover) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, turnover.buildingId)) {
+  if (!(await canAccessBuilding(user, turnover.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

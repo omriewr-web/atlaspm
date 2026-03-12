@@ -17,7 +17,7 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   }
 
   // Scope check: non-admin users can only modify signals for their buildings
-  if (signal.buildingId && !canAccessBuilding(user, signal.buildingId)) {
+  if (signal.buildingId && !(await canAccessBuilding(user, signal.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

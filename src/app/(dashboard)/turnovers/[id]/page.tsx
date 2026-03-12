@@ -1,9 +1,9 @@
 "use client";
 
-import { use } from "react";
+import { useParams } from "next/navigation";
 import TurnoverDetailContent from "./turnover-detail-content";
 
-export default function TurnoverDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function TurnoverDetailPage() {
+  const { id } = useParams<{ id: string }>();
   return <TurnoverDetailContent id={id} />;
 }

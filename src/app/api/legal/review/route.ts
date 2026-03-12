@@ -1,9 +1,10 @@
 // Permission: "legal" — legal import review queue
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { LegalStage } from "@prisma/client";
-import { assertTenantAccess } from "@/lib/data-scope";
+import { assertTenantAccess, getOrgScope } from "@/lib/data-scope";
+import { legalReviewSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +22,36 @@ function parseStage(value: string | undefined | null): LegalStage {
   return STAGE_MAP[value.toLowerCase().replace(/[_-]/g, " ").trim()] || "NONPAYMENT";
 }
 
-// GET — List pending review items
-export const GET = withAuth(async (req: NextRequest) => {
+// GET — List pending review items (scoped to user's org via candidate tenants)
+export const GET = withAuth(async (req: NextRequest, { user }) => {
+  if (user.role === "SUPER_ADMIN") {
+    const items = await prisma.legalImportQueue.findMany({
+      where: { status: "pending" },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json({ items });
+  }
+
+  // Get tenant IDs in the user's org to scope queue items
+  const orgBuildings = await prisma.building.findMany({
+    where: { organizationId: user.organizationId },
+    select: { id: true },
+  });
+  const orgBuildingIds = orgBuildings.map((b) => b.id);
+  const orgTenants = await prisma.tenant.findMany({
+    where: { unit: { buildingId: { in: orgBuildingIds } } },
+    select: { id: true },
+  });
+  const orgTenantIds = orgTenants.map((t) => t.id);
+
   const items = await prisma.legalImportQueue.findMany({
-    where: { status: "pending" },
+    where: {
+      status: "pending",
+      OR: [
+        { candidateTenantId: { in: orgTenantIds } },
+        { candidateTenantId: null },
+      ],
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -33,16 +60,7 @@ export const GET = withAuth(async (req: NextRequest) => {
 
 // POST — Resolve a review item (approve with tenant assignment, or reject)
 export const POST = withAuth(async (req: NextRequest, { user }) => {
-  const body = await req.json();
-  const { queueId, action, tenantId } = body as {
-    queueId: string;
-    action: "approve" | "reject";
-    tenantId?: string;
-  };
-
-  if (!queueId || !action) {
-    return NextResponse.json({ error: "queueId and action required" }, { status: 400 });
-  }
+  const { queueId, action, tenantId } = await parseBody(req, legalReviewSchema);
 
   const item = await prisma.legalImportQueue.findUnique({ where: { id: queueId } });
   if (!item) {

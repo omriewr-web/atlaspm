@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
+import { parseBody } from "@/lib/api-helpers";
+import { utilityMeterCreateSchema } from "@/lib/validations";
 import { computeRiskFlags, primaryRiskFlag } from "@/lib/utility-risk";
 
 export const dynamic = "force-dynamic";
@@ -131,12 +133,7 @@ export const GET = withAuth(async (req, { user }) => {
 }, "utilities");
 
 export const POST = withAuth(async (req, { user }) => {
-  const body = await req.json();
-  const { buildingId, unitId, utilityType, providerName, meterNumber, serviceAddress, notes } = body;
-
-  if (!buildingId || !utilityType) {
-    return NextResponse.json({ error: "buildingId and utilityType are required" }, { status: 400 });
-  }
+  const { buildingId, unitId, utilityType, providerName, meterNumber, serviceAddress, notes } = await parseBody(req, utilityMeterCreateSchema);
 
   // Verify building access
   const accessErr = await assertBuildingAccess(user, buildingId);

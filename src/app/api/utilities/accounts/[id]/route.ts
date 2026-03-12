@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
+import { utilityAccountUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export const GET = withAuth(async (req, { user, params }) => {
   });
 
   if (!account) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, account.meter.buildingId)) {
+  if (!(await canAccessBuilding(user, account.meter.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -30,12 +31,11 @@ export const PATCH = withAuth(async (req, { user, params }) => {
     include: { meter: { select: { buildingId: true } } },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, existing.meter.buildingId)) {
+  if (!(await canAccessBuilding(user, existing.meter.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { accountNumber, assignedPartyType, assignedPartyName, tenantId, startDate, endDate, status, closedWithBalance, notes } = body;
+  const { accountNumber, assignedPartyType, assignedPartyName, tenantId, startDate, endDate, status, closedWithBalance, notes } = await parseBody(req, utilityAccountUpdateSchema);
 
   const account = await prisma.utilityAccount.update({
     where: { id },

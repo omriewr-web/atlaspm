@@ -10,6 +10,15 @@ export const dynamic = "force-dynamic";
 
 export const PATCH = withAuth(async (req, { user, params }) => {
   const { id } = await params;
+
+  // Verify target user belongs to same org (unless SUPER_ADMIN)
+  if (user.role !== "SUPER_ADMIN") {
+    const target = await prisma.user.findUnique({ where: { id }, select: { organizationId: true } });
+    if (!target || target.organizationId !== user.organizationId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+  }
+
   const data = await parseBody(req, userUpdateSchema);
 
   // If changing role, enforce permissions
@@ -55,8 +64,17 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   return NextResponse.json(result);
 }, "users");
 
-export const DELETE = withAuth(async (req, { params }) => {
+export const DELETE = withAuth(async (req, { user, params }) => {
   const { id } = await params;
+
+  // Verify target user belongs to same org (unless SUPER_ADMIN)
+  if (user.role !== "SUPER_ADMIN") {
+    const target = await prisma.user.findUnique({ where: { id }, select: { organizationId: true } });
+    if (!target || target.organizationId !== user.organizationId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+  }
+
   await prisma.user.update({ where: { id }, data: { active: false } });
   return NextResponse.json({ success: true });
 }, "users");

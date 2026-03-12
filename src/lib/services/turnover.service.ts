@@ -5,6 +5,7 @@ import { TurnoverStatus } from "@prisma/client";
 interface ScopeUser {
   role: string;
   assignedProperties?: string[] | null;
+  organizationId?: string;
 }
 
 // ── Status ordering ──────────────────────────────────────────

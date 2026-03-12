@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { getBuildingScope, EMPTY_SCOPE, assertBuildingAccess } from "@/lib/data-scope";
+import { unitCreateSchema } from "@/lib/validations";
 import { getDisplayAddress } from "@/lib/building-matching";
 
 export const dynamic = "force-dynamic";
@@ -42,10 +43,7 @@ export const GET = withAuth(async (req, { user }) => {
 });
 
 export const POST = withAuth(async (req, { user }) => {
-  const { buildingId, unitNumber, unitType } = await req.json();
-  if (!buildingId || !unitNumber) {
-    return NextResponse.json({ error: "buildingId and unitNumber required" }, { status: 400 });
-  }
+  const { buildingId, unitNumber, unitType } = await parseBody(req, unitCreateSchema);
 
   // Verify building access
   const accessErr = await assertBuildingAccess(user, buildingId);

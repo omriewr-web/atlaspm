@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // POST /api/import/buildings
 // ?mode=preview  → parse file, return preview of what will be created/updated
 // ?mode=confirm  → actually import the data
-export const POST = withAuth(async (req: NextRequest) => {
+export const POST = withAuth(async (req: NextRequest, { user }) => {
   const url = new URL(req.url);
   const mode = url.searchParams.get("mode") || "preview";
 
@@ -30,8 +30,10 @@ export const POST = withAuth(async (req: NextRequest) => {
     }, { status: 400 });
   }
 
-  // Load existing buildings for matching
+  // Load existing buildings for matching (scoped to user's org)
+  const orgFilter = user.role === "SUPER_ADMIN" ? {} : { organizationId: user.organizationId };
   const existingBuildings = await prisma.building.findMany({
+    where: orgFilter,
     select: {
       id: true,
       address: true,
@@ -106,6 +108,7 @@ export const POST = withAuth(async (req: NextRequest) => {
             yardiId,
             propertyId,
             address: row.address,
+            organizationId: user.organizationId,
           } as any,
         });
         created++;

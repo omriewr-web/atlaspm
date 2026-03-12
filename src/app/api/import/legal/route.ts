@@ -73,8 +73,10 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     return NextResponse.json({ error: "No rows found in spreadsheet" }, { status: 400 });
   }
 
-  // Build lookup maps
+  // Build lookup maps (scoped to user's org)
+  const orgFilter = user.role === "SUPER_ADMIN" ? {} : { organizationId: user.organizationId };
   const buildings = await prisma.building.findMany({
+    where: orgFilter,
     select: { id: true, address: true, altAddress: true },
   });
   const addressToBuildingId = new Map<string, string>();
@@ -83,7 +85,10 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     if (b.altAddress) addressToBuildingId.set(normalizeAddress(b.altAddress), b.id);
   }
 
+  // Scope tenants to buildings in the user's org
+  const orgBuildingIds = buildings.map((b) => b.id);
   const dbTenants = await prisma.tenant.findMany({
+    where: { unit: { buildingId: { in: orgBuildingIds } } },
     select: {
       id: true,
       name: true,

@@ -1,8 +1,9 @@
 // Permission: "vac" — leasing activity log for vacant units
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { getBuildingScope, EMPTY_SCOPE } from "@/lib/data-scope";
+import { leasingActivityCreateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -46,12 +47,7 @@ export const GET = withAuth(async (req, { user }) => {
 }, "vac");
 
 export const POST = withAuth(async (req, { user }) => {
-  const body = await req.json();
-  const { unitId, buildingId, type, description, contactName, contactInfo } = body;
-
-  if (!unitId || !buildingId || !type) {
-    return NextResponse.json({ error: "unitId, buildingId, and type are required" }, { status: 400 });
-  }
+  const { unitId, buildingId, type, description, contactName, contactInfo } = await parseBody(req, leasingActivityCreateSchema);
 
   const activity = await prisma.leasingActivity.create({
     data: {

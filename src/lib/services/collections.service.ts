@@ -7,6 +7,7 @@ import type { CollectionActionType, Prisma } from "@prisma/client";
 interface ScopeUser {
   role: string;
   assignedProperties?: string[] | null;
+  organizationId?: string;
 }
 
 class ApiError extends Error {
@@ -23,7 +24,7 @@ async function verifyBuildingAccess(user: ScopeUser, tenantId: string) {
     select: { id: true, unit: { select: { buildingId: true } } },
   });
   if (!tenant) throw new ApiError("Tenant not found", 404);
-  if (!canAccessBuilding(user, tenant.unit.buildingId)) throw new ApiError("Forbidden", 403);
+  if (!(await canAccessBuilding(user, tenant.unit.buildingId))) throw new ApiError("Forbidden", 403);
   return tenant.unit.buildingId;
 }
 
@@ -264,7 +265,7 @@ export async function updateCollectionStatus(
     select: { id: true, unitId: true, unit: { select: { buildingId: true } } },
   });
   if (!tenant) throw new ApiError("Tenant not found", 404);
-  if (!canAccessBuilding(user, tenant.unit.buildingId)) throw new ApiError("Forbidden", 403);
+  if (!(await canAccessBuilding(user, tenant.unit.buildingId))) throw new ApiError("Forbidden", 403);
 
   const existing = await prisma.collectionCase.findFirst({
     where: { tenantId, isActive: true },
@@ -432,7 +433,7 @@ export async function bulkCollectionAction(
     if (!t) {
       throw new ApiError(`Tenant ${id} not found`, 404);
     }
-    if (!canAccessBuilding(user, t.unit.buildingId)) {
+    if (!(await canAccessBuilding(user, t.unit.buildingId))) {
       throw new ApiError("One or more tenants are outside your building scope", 403);
     }
   }
@@ -494,7 +495,7 @@ export async function sendToLegal(
     select: { id: true, name: true, balance: true, unitId: true, unit: { select: { buildingId: true } } },
   });
   if (!tenant) throw new ApiError("Tenant not found", 404);
-  if (!canAccessBuilding(user, tenant.unit.buildingId)) throw new ApiError("Forbidden", 403);
+  if (!(await canAccessBuilding(user, tenant.unit.buildingId))) throw new ApiError("Forbidden", 403);
 
   // Check for existing active legal case
   const existingLegal = await prisma.legalCase.findFirst({

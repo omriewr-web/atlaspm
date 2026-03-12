@@ -37,8 +37,10 @@ export function withAuth(handler: ApiHandler, perm?: string) {
       return await handler(req, { user, params: context?.params });
     } catch (error: any) {
       console.error("API Error:", error);
+      // Only expose message for known API errors; hide internal details
+      const isApiError = error.status && error.status < 500;
       return NextResponse.json(
-        { error: error.message || "Internal server error" },
+        { error: isApiError ? error.message : "Internal server error" },
         { status: error.status || 500 }
       );
     }

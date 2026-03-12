@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
+import { utilityCheckCreateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export const GET = withAuth(async (req, { user, params }) => {
     include: { meter: { select: { buildingId: true } } },
   });
   if (!account) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, account.meter.buildingId)) {
+  if (!(await canAccessBuilding(user, account.meter.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -33,26 +34,11 @@ export const POST = withAuth(async (req, { user, params }) => {
     include: { meter: { select: { buildingId: true } } },
   });
   if (!account) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canAccessBuilding(user, account.meter.buildingId)) {
+  if (!(await canAccessBuilding(user, account.meter.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { month, year, isPaid, paidDate, amount, notes } = body;
-
-  // Validate month
-  if (!month || !year || typeof month !== "number" || typeof year !== "number") {
-    return NextResponse.json({ error: "month and year are required numbers" }, { status: 400 });
-  }
-  if (month < 1 || month > 12) {
-    return NextResponse.json({ error: "month must be between 1 and 12" }, { status: 400 });
-  }
-  if (year < 2000 || year > 2099) {
-    return NextResponse.json({ error: "year must be a valid 4-digit year" }, { status: 400 });
-  }
-  if (amount !== undefined && amount !== null && (typeof amount !== "number" || amount < 0)) {
-    return NextResponse.json({ error: "amount must be a non-negative number" }, { status: 400 });
-  }
+  const { month, year, isPaid, paidDate, amount, notes } = await parseBody(req, utilityCheckCreateSchema);
 
   const paymentStatus = isPaid ? "paid" : "unpaid";
   const resolvedPaidDate = isPaid ? (paidDate ? new Date(paidDate) : new Date()) : null;

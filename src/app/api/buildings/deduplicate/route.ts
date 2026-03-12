@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { normalizeAddress, normalizeBlockLot, extractAddressFromEntity } from "@/lib/building-matching";
+import { getOrgScope } from "@/lib/data-scope";
+import { deduplicateMergeSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +12,9 @@ const FORBIDDEN = NextResponse.json({ error: "Forbidden" }, { status: 403 });
 // GET /api/buildings/deduplicate?mode=scan
 export const GET = withAuth(async (req: NextRequest, { user }) => {
   if (!["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"].includes(user.role)) return FORBIDDEN;
+  const orgScope = getOrgScope(user);
   const buildings = await prisma.building.findMany({
+    where: orgScope,
     select: {
       id: true,
       address: true,
@@ -29,11 +33,14 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   });
 
   // Also count tenants per building
+  const buildingIds = buildings.map((b) => b.id);
   const tenantCounts = await prisma.tenant.groupBy({
     by: ["unitId"],
     _count: true,
+    where: { unit: { buildingId: { in: buildingIds } } },
   });
   const unitBuilding = await prisma.unit.findMany({
+    where: { buildingId: { in: buildingIds } },
     select: { id: true, buildingId: true },
   });
   const unitToBuildingMap = new Map(unitBuilding.map((u) => [u.id, u.buildingId]));
@@ -225,11 +232,18 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
 // POST /api/buildings/deduplicate — merge duplicates
 export const POST = withAuth(async (req: NextRequest, { user }) => {
   if (!["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"].includes(user.role)) return FORBIDDEN;
-  const body = await req.json();
-  const { keepId, mergeIds } = body as { keepId: string; mergeIds: string[] };
+  const { keepId, mergeIds } = await parseBody(req, deduplicateMergeSchema);
 
-  if (!keepId || !mergeIds?.length) {
-    return NextResponse.json({ error: "keepId and mergeIds required" }, { status: 400 });
+  // Verify all buildings belong to user's org
+  if (user.role !== "SUPER_ADMIN") {
+    const allIds = [keepId, ...mergeIds];
+    const owned = await prisma.building.findMany({
+      where: { id: { in: allIds }, organizationId: user.organizationId },
+      select: { id: true },
+    });
+    if (owned.length !== allIds.length) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -343,16 +357,19 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
 // PUT /api/buildings/deduplicate — auto-scan + auto-merge all duplicates in one call
 export const PUT = withAuth(async (req: NextRequest, { user }) => {
   if (!["SUPER_ADMIN", "ADMIN", "ACCOUNT_ADMIN"].includes(user.role)) return FORBIDDEN;
-  // Step 1: Scan (same logic as GET)
+  const orgScope = getOrgScope(user);
+  // Step 1: Scan (same logic as GET, scoped to user's org)
   const buildings = await prisma.building.findMany({
+    where: orgScope,
     select: {
       id: true, address: true, altAddress: true, block: true, lot: true, entity: true, yardiId: true,
       _count: { select: { units: true, violations: true, complianceItems: true } },
     },
   });
 
-  const tenantCounts = await prisma.tenant.groupBy({ by: ["unitId"], _count: true });
-  const unitBuilding = await prisma.unit.findMany({ select: { id: true, buildingId: true } });
+  const putBuildingIds = buildings.map((b) => b.id);
+  const tenantCounts = await prisma.tenant.groupBy({ by: ["unitId"], _count: true, where: { unit: { buildingId: { in: putBuildingIds } } } });
+  const unitBuilding = await prisma.unit.findMany({ where: { buildingId: { in: putBuildingIds } }, select: { id: true, buildingId: true } });
   const unitToBuildingMap = new Map(unitBuilding.map((u) => [u.id, u.buildingId]));
   const buildingTenantCount = new Map<string, number>();
   for (const tc of tenantCounts) {

@@ -5,8 +5,8 @@ import { commitRentRollImport } from "@/lib/importer/commit";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/import/staging — list staging batches
-export const GET = withAuth(async (req: NextRequest) => {
+// GET /api/import/staging — list staging batches (scoped to user's org)
+export const GET = withAuth(async (req: NextRequest, { user }) => {
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const id = url.searchParams.get("id");
@@ -14,10 +14,26 @@ export const GET = withAuth(async (req: NextRequest) => {
   if (id) {
     const batch = await prisma.importStagingBatch.findUnique({ where: { id } });
     if (!batch) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Verify batch belongs to user's org by checking the uploader
+    if (user.role !== "SUPER_ADMIN" && batch.uploadedById) {
+      const uploader = await prisma.user.findUnique({ where: { id: batch.uploadedById }, select: { organizationId: true } });
+      if (uploader && uploader.organizationId !== user.organizationId) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+    }
     return NextResponse.json(batch);
   }
 
-  const where = status && status !== "all" ? { status } : {};
+  // Scope to batches uploaded by users in the same org
+  const orgUserIds = user.role === "SUPER_ADMIN" ? undefined : (
+    await prisma.user.findMany({ where: { organizationId: user.organizationId }, select: { id: true } })
+  ).map((u) => u.id);
+
+  const where: Record<string, unknown> = status && status !== "all" ? { status } : {};
+  if (orgUserIds) {
+    where.uploadedById = { in: orgUserIds };
+  }
+
   const batches = await prisma.importStagingBatch.findMany({
     where,
     orderBy: { createdAt: "desc" },
@@ -28,7 +44,7 @@ export const GET = withAuth(async (req: NextRequest) => {
     },
   });
   return NextResponse.json(batches);
-});
+}, "upload");
 
 // POST /api/import/staging — approve or reject a staging batch
 export const POST = withAuth(async (req: NextRequest, { user }) => {
@@ -41,6 +57,13 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
 
   const batch = await prisma.importStagingBatch.findUnique({ where: { id } });
   if (!batch) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Verify batch belongs to user's org
+  if (user.role !== "SUPER_ADMIN" && batch.uploadedById) {
+    const uploader = await prisma.user.findUnique({ where: { id: batch.uploadedById }, select: { organizationId: true } });
+    if (uploader && uploader.organizationId !== user.organizationId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+  }
   if (batch.status !== "pending_review") {
     return NextResponse.json({ error: `Batch already ${batch.status}` }, { status: 400 });
   }
@@ -109,4 +132,4 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     success: true, status: "approved",
     imported, skipped, errors, batchId: importBatch.id,
   });
-});
+}, "upload");

@@ -12,6 +12,9 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   if (denied) return denied;
 
   const data = await parseBody(req, noteUpdateSchema);
+  // Verify note belongs to this tenant
+  const existing = await prisma.tenantNote.findUnique({ where: { id: noteId }, select: { tenantId: true } });
+  if (!existing || existing.tenantId !== id) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const note = await prisma.tenantNote.update({
     where: { id: noteId },
     data,
@@ -25,8 +28,8 @@ export const DELETE = withAuth(async (req, { user, params }) => {
   const denied = await assertTenantAccess(user, id);
   if (denied) return denied;
 
-  const note = await prisma.tenantNote.findUnique({ where: { id: noteId } });
-  if (!note) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const note = await prisma.tenantNote.findUnique({ where: { id: noteId }, select: { tenantId: true } });
+  if (!note || note.tenantId !== id) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.tenantNote.delete({ where: { id: noteId } });
   return NextResponse.json({ success: true });

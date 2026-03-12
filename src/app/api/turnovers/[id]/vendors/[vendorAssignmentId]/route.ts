@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
+import { turnoverVendorUpdateSchema } from "@/lib/validations";
 import { getTurnover, updateVendorAssignment } from "@/lib/services/turnover.service";
 import { prisma } from "@/lib/prisma";
 
@@ -11,7 +12,7 @@ export const PATCH = withAuth(async (req, { user, params }) => {
 
   const turnover = await getTurnover(id);
   if (!turnover) return NextResponse.json({ error: "Turnover not found" }, { status: 404 });
-  if (!canAccessBuilding(user, turnover.buildingId)) {
+  if (!(await canAccessBuilding(user, turnover.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -23,7 +24,7 @@ export const PATCH = withAuth(async (req, { user, params }) => {
     return NextResponse.json({ error: "Vendor assignment not found" }, { status: 404 });
   }
 
-  const body = await req.json();
-  const updated = await updateVendorAssignment(vendorAssignmentId, body);
+  const data = await parseBody(req, turnoverVendorUpdateSchema);
+  const updated = await updateVendorAssignment(vendorAssignmentId, data);
   return NextResponse.json(updated);
 }, "vac");

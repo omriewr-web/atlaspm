@@ -5,6 +5,7 @@ import type { OwnerDashboardDTO } from "@/types";
 interface ScopeUser {
   role: string;
   assignedProperties?: string[] | null;
+  organizationId?: string;
 }
 
 export async function getOwnerDashboard(user: ScopeUser): Promise<OwnerDashboardDTO> {

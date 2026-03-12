@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
+import { utilityAccountCreateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 export const POST = withAuth(async (req, { user }) => {
-  const body = await req.json();
-  const { utilityMeterId, accountNumber, assignedPartyType, assignedPartyName, tenantId, startDate, notes } = body;
-
-  if (!utilityMeterId || !assignedPartyType) {
-    return NextResponse.json({ error: "utilityMeterId and assignedPartyType are required" }, { status: 400 });
-  }
+  const { utilityMeterId, accountNumber, assignedPartyType, assignedPartyName, tenantId, startDate, notes } = await parseBody(req, utilityAccountCreateSchema);
 
   // Verify meter access
   const meter = await prisma.utilityMeter.findUnique({
@@ -19,7 +15,7 @@ export const POST = withAuth(async (req, { user }) => {
     select: { buildingId: true },
   });
   if (!meter) return NextResponse.json({ error: "Meter not found" }, { status: 404 });
-  if (!canAccessBuilding(user, meter.buildingId)) {
+  if (!(await canAccessBuilding(user, meter.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

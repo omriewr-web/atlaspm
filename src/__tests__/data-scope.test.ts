@@ -5,8 +5,9 @@
  *   A. Buildings API scope (getBuildingIdScope)
  *   B. Work order building access (canAccessBuilding / assertBuildingAccess)
  *   7. Standardized route-level authorization via centralized helpers
+ *   C. Organization isolation (ADMIN scoped to their org, SUPER_ADMIN sees all)
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   getBuildingScope,
   getBuildingIdScope,
@@ -15,12 +16,26 @@ import {
   EMPTY_SCOPE,
 } from "@/lib/data-scope";
 
+// Mock prisma for canAccessBuilding async DB lookups
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    building: {
+      findUnique: vi.fn().mockResolvedValue({ organizationId: "org-1" }),
+    },
+    tenant: { findUnique: vi.fn() },
+    workOrder: { findUnique: vi.fn() },
+    unit: { findUnique: vi.fn() },
+    complianceItem: { findUnique: vi.fn() },
+  },
+}));
+
 // ── Test users ──
 
-const admin = { role: "ADMIN", assignedProperties: [] };
-const scopedUser = { role: "PM", assignedProperties: ["bld-1", "bld-2"] };
-const emptyUser = { role: "PM", assignedProperties: [] };
-const nullUser = { role: "COLLECTOR", assignedProperties: null };
+const superAdmin = { role: "SUPER_ADMIN", assignedProperties: [], organizationId: "org-1" };
+const admin = { role: "ADMIN", assignedProperties: [], organizationId: "org-1" };
+const scopedUser = { role: "PM", assignedProperties: ["bld-1", "bld-2"], organizationId: "org-1" };
+const emptyUser = { role: "PM", assignedProperties: [], organizationId: "org-1" };
+const nullUser = { role: "COLLECTOR", assignedProperties: null, organizationId: "org-1" };
 const undefinedUser = { role: "COLLECTOR" } as any;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,9 +43,14 @@ const undefinedUser = { role: "COLLECTOR" } as any;
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("getBuildingIdScope", () => {
-  it("admin sees all buildings (empty where clause)", () => {
-    const scope = getBuildingIdScope(admin);
+  it("SUPER_ADMIN sees all buildings (empty where clause)", () => {
+    const scope = getBuildingIdScope(superAdmin);
     expect(scope).toEqual({});
+  });
+
+  it("ADMIN sees only their org's buildings", () => {
+    const scope = getBuildingIdScope(admin);
+    expect(scope).toEqual({ organizationId: "org-1" });
   });
 
   it("scoped user sees only assigned buildings", () => {
@@ -50,9 +70,14 @@ describe("getBuildingIdScope", () => {
     expect(getBuildingIdScope(undefinedUser)).toBe(EMPTY_SCOPE);
   });
 
-  it("admin with explicit buildingId gets scoped to that building", () => {
-    const scope = getBuildingIdScope(admin, "bld-99");
+  it("SUPER_ADMIN with explicit buildingId gets scoped to that building", () => {
+    const scope = getBuildingIdScope(superAdmin, "bld-99");
     expect(scope).toEqual({ id: "bld-99" });
+  });
+
+  it("ADMIN with explicit buildingId also scopes by org", () => {
+    const scope = getBuildingIdScope(admin, "bld-99");
+    expect(scope).toEqual({ id: "bld-99", organizationId: "org-1" });
   });
 
   it("scoped user with assigned explicit buildingId gets access", () => {
@@ -66,38 +91,46 @@ describe("getBuildingIdScope", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// B. Work order / generic building access — canAccessBuilding
+// B. Work order / generic building access — canAccessBuilding (now async)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("canAccessBuilding", () => {
-  it("admin can access any building", () => {
-    expect(canAccessBuilding(admin, "any-building")).toBe(true);
+  it("SUPER_ADMIN can access any building", async () => {
+    expect(await canAccessBuilding(superAdmin, "any-building")).toBe(true);
   });
 
-  it("scoped user can access assigned building", () => {
-    expect(canAccessBuilding(scopedUser, "bld-1")).toBe(true);
+  it("ADMIN can access building in their org", async () => {
+    expect(await canAccessBuilding(admin, "bld-in-org")).toBe(true);
   });
 
-  it("scoped user cannot access unassigned building", () => {
-    expect(canAccessBuilding(scopedUser, "bld-99")).toBe(false);
+  it("scoped user can access assigned building", async () => {
+    expect(await canAccessBuilding(scopedUser, "bld-1")).toBe(true);
   });
 
-  it("user with no assignments cannot access any building", () => {
-    expect(canAccessBuilding(emptyUser, "bld-1")).toBe(false);
+  it("scoped user cannot access unassigned building", async () => {
+    expect(await canAccessBuilding(scopedUser, "bld-99")).toBe(false);
   });
 
-  it("user with null assignments cannot access any building", () => {
-    expect(canAccessBuilding(nullUser, "bld-1")).toBe(false);
+  it("user with no assignments cannot access any building", async () => {
+    expect(await canAccessBuilding(emptyUser, "bld-1")).toBe(false);
+  });
+
+  it("user with null assignments cannot access any building", async () => {
+    expect(await canAccessBuilding(nullUser, "bld-1")).toBe(false);
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// getBuildingScope (used by work orders, compliance, violations, etc.)
+// C. Organization isolation — getBuildingScope
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("getBuildingScope", () => {
-  it("admin sees all (empty where)", () => {
-    expect(getBuildingScope(admin)).toEqual({});
+  it("SUPER_ADMIN sees all (empty where)", () => {
+    expect(getBuildingScope(superAdmin)).toEqual({});
+  });
+
+  it("ADMIN scoped to their org's buildings", () => {
+    expect(getBuildingScope(admin)).toEqual({ building: { organizationId: "org-1" } });
   });
 
   it("scoped user gets buildingId filter", () => {
@@ -112,9 +145,14 @@ describe("getBuildingScope", () => {
     expect(getBuildingScope(nullUser)).toBe(EMPTY_SCOPE);
   });
 
-  it("explicit buildingId restricts admin to single building", () => {
-    const scope = getBuildingScope(admin, "bld-5");
+  it("explicit buildingId for SUPER_ADMIN restricts to single building", () => {
+    const scope = getBuildingScope(superAdmin, "bld-5");
     expect(scope).toEqual({ buildingId: { in: ["bld-5"] } });
+  });
+
+  it("explicit buildingId for ADMIN also scopes by org", () => {
+    const scope = getBuildingScope(admin, "bld-5");
+    expect(scope).toEqual({ buildingId: { in: ["bld-5"] }, building: { organizationId: "org-1" } });
   });
 
   it("explicit unassigned buildingId for scoped user returns EMPTY_SCOPE", () => {
@@ -127,8 +165,12 @@ describe("getBuildingScope", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("getTenantScope", () => {
-  it("admin sees all tenants (empty where)", () => {
-    expect(getTenantScope(admin)).toEqual({});
+  it("SUPER_ADMIN sees all tenants (empty where)", () => {
+    expect(getTenantScope(superAdmin)).toEqual({});
+  });
+
+  it("ADMIN scoped to their org's tenants", () => {
+    expect(getTenantScope(admin)).toEqual({ unit: { building: { organizationId: "org-1" } } });
   });
 
   it("scoped user gets nested unit.buildingId filter", () => {
@@ -139,8 +181,14 @@ describe("getTenantScope", () => {
     expect(getTenantScope(emptyUser)).toBe(EMPTY_SCOPE);
   });
 
-  it("explicit buildingId for admin scopes to that building", () => {
-    expect(getTenantScope(admin, "bld-5")).toEqual({ unit: { buildingId: "bld-5" } });
+  it("explicit buildingId for SUPER_ADMIN scopes to that building", () => {
+    expect(getTenantScope(superAdmin, "bld-5")).toEqual({ unit: { buildingId: "bld-5" } });
+  });
+
+  it("explicit buildingId for ADMIN also scopes by org", () => {
+    expect(getTenantScope(admin, "bld-5")).toEqual({
+      unit: { buildingId: "bld-5", building: { organizationId: "org-1" } },
+    });
   });
 
   it("explicit unassigned buildingId returns EMPTY_SCOPE", () => {

@@ -32,7 +32,7 @@ export const POST = withAuth(async (req, { user }) => {
   }
 
   for (const wo of workOrders) {
-    if (!canAccessBuilding(user, wo.buildingId)) {
+    if (!(await canAccessBuilding(user, wo.buildingId))) {
       return NextResponse.json({ error: "Forbidden — one or more work orders are out of scope" }, { status: 403 });
     }
   }

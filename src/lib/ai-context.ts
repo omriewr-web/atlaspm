@@ -1,4 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { getBuildingScope, getTenantScope, canAccessBuilding, EMPTY_SCOPE } from "@/lib/data-scope";
+
+interface AiUser {
+  role: string;
+  name?: string;
+  assignedProperties?: string[] | null;
+  organizationId?: string;
+}
 
 function fmt$(n: number | any): string {
   return "$" + Math.abs(Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -9,21 +17,25 @@ function fmtDate(d: Date | null | undefined): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export async function buildPortfolioContext(user: any, tenantId?: string): Promise<string> {
+export async function buildPortfolioContext(user: AiUser, tenantId?: string): Promise<string> {
   const sections: string[] = [];
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
 
-  // If tenant-specific, build focused context
+  // If tenant-specific, build focused context (with access check)
   if (tenantId) {
-    return buildTenantContext(tenantId);
+    return buildTenantContext(user, tenantId);
   }
 
-  // Role-based building filter
-  const buildingWhere: any = {};
-  if (user.role !== "ADMIN" && user.assignedProperties?.length) {
-    buildingWhere.id = { in: user.assignedProperties };
+  // Use shared data-scope helpers for building filter
+  const buildingScope = getBuildingScope(user);
+  if (buildingScope === EMPTY_SCOPE) {
+    return `No buildings accessible for user ${user.name || "unknown"} (${user.role}).`;
   }
+  const buildingWhere = buildingScope as Record<string, unknown>;
+
+  const tenantScope = getTenantScope(user);
+  const tenantWhere = tenantScope === EMPTY_SCOPE ? { id: "__none__" } : (tenantScope as Record<string, unknown>);
 
   // 1. Buildings overview
   const buildings = await prisma.building.findMany({
@@ -46,13 +58,8 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
   sections.push(`BUILDINGS (${buildings.length}):\n${buildingSummary}`);
 
   // 2. All tenants with balances
-  const unitWhere: any = {};
-  if (user.role !== "ADMIN" && user.assignedProperties?.length) {
-    unitWhere.unit = { buildingId: { in: user.assignedProperties } };
-  }
-
   const tenants = await prisma.tenant.findMany({
-    where: unitWhere,
+    where: tenantWhere,
     include: {
       unit: { include: { building: { select: { address: true } } } },
       legalCases: { where: { isActive: true }, select: { inLegal: true, stage: true, caseNumber: true, attorney: true }, take: 1 },
@@ -83,9 +90,7 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
   const recentNotes = await prisma.tenantNote.findMany({
     where: {
       createdAt: { gte: thirtyDaysAgo },
-      ...(user.role !== "ADMIN" && user.assignedProperties?.length
-        ? { tenant: { unit: { buildingId: { in: user.assignedProperties } } } }
-        : {}),
+      tenant: tenantWhere,
     },
     include: {
       tenant: { select: { name: true, unit: { select: { unitNumber: true, building: { select: { address: true } } } } } },
@@ -106,9 +111,7 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
   const legalCases = await prisma.legalCase.findMany({
     where: {
       inLegal: true,
-      ...(user.role !== "ADMIN" && user.assignedProperties?.length
-        ? { tenant: { unit: { buildingId: { in: user.assignedProperties } } } }
-        : {}),
+      tenant: tenantWhere,
     },
     include: {
       tenant: {
@@ -133,9 +136,11 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
   const vacantUnits = await prisma.unit.findMany({
     where: {
       isVacant: true,
-      ...(user.role !== "ADMIN" && user.assignedProperties?.length
-        ? { buildingId: { in: user.assignedProperties } }
-        : {}),
+      ...(buildingWhere.building
+        ? { building: (buildingWhere as any).building }
+        : buildingWhere.buildingId
+          ? { buildingId: (buildingWhere as any).buildingId }
+          : {}),
     },
     include: {
       building: { select: { address: true } },
@@ -154,9 +159,7 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
   const recentPayments = await prisma.payment.findMany({
     where: {
       createdAt: { gte: thirtyDaysAgo },
-      ...(user.role !== "ADMIN" && user.assignedProperties?.length
-        ? { tenant: { unit: { buildingId: { in: user.assignedProperties } } } }
-        : {}),
+      tenant: tenantWhere,
     },
     include: {
       tenant: { select: { name: true, unit: { select: { unitNumber: true, building: { select: { address: true } } } } } },
@@ -177,9 +180,7 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
   const expiringLeases = await prisma.tenant.findMany({
     where: {
       leaseExpiration: { lte: ninetyDaysFromNow, gte: now },
-      ...(user.role !== "ADMIN" && user.assignedProperties?.length
-        ? { unit: { buildingId: { in: user.assignedProperties } } }
-        : {}),
+      ...tenantWhere,
     },
     include: {
       unit: { include: { building: { select: { address: true } } } },
@@ -199,9 +200,7 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
   const openWOs = await prisma.workOrder.findMany({
     where: {
       status: { in: ["OPEN", "IN_PROGRESS"] },
-      ...(user.role !== "ADMIN" && user.assignedProperties?.length
-        ? { buildingId: { in: user.assignedProperties } }
-        : {}),
+      ...buildingWhere,
     },
     include: {
       building: { select: { address: true } },
@@ -224,9 +223,7 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
   const commLogs = await prisma.commLog.findMany({
     where: {
       createdAt: { gte: fourteenDaysAgo },
-      ...(user.role !== "ADMIN" && user.assignedProperties?.length
-        ? { tenant: { unit: { buildingId: { in: user.assignedProperties } } } }
-        : {}),
+      tenant: tenantWhere,
     },
     include: {
       tenant: { select: { name: true } },
@@ -243,12 +240,22 @@ export async function buildPortfolioContext(user: any, tenantId?: string): Promi
     sections.push(`RECENT COMMUNICATIONS (last 14 days, ${commLogs.length}):\n${commText}`);
   }
 
-  sections.push(`\nToday's date: ${fmtDate(now)}\nUser: ${user.name} (${user.role})`);
+  sections.push(`\nToday's date: ${fmtDate(now)}\nUser: ${user.name || "unknown"} (${user.role})`);
 
   return sections.join("\n\n");
 }
 
-async function buildTenantContext(tenantId: string): Promise<string> {
+async function buildTenantContext(user: AiUser, tenantId: string): Promise<string> {
+  // Verify user can access this tenant before loading data
+  const tenantCheck = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { unit: { select: { buildingId: true } } },
+  });
+  if (!tenantCheck) return "Tenant not found.";
+  if (!(await canAccessBuilding(user, tenantCheck.unit.buildingId))) {
+    return "Access denied: you do not have permission to view this tenant.";
+  }
+
   const sections: string[] = [];
   const now = new Date();
 

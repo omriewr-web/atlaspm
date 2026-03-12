@@ -324,7 +324,91 @@ export const complianceGenerateSchema = z.object({
   buildingId: z.string().min(1),
 });
 
+// ── Utility Schemas ─────────────────────────────────────────
+
+export const utilityMeterCreateSchema = z.object({
+  buildingId: z.string().min(1),
+  unitId: z.string().nullable().optional(),
+  utilityType: z.string().min(1),
+  providerName: z.string().nullable().optional(),
+  meterNumber: z.string().nullable().optional(),
+  serviceAddress: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export const utilityMeterUpdateSchema = z.object({
+  utilityType: z.string().min(1).optional(),
+  providerName: z.string().nullable().optional(),
+  meterNumber: z.string().nullable().optional(),
+  serviceAddress: z.string().nullable().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
+  unitId: z.string().nullable().optional(),
+});
+
+export const utilityAccountCreateSchema = z.object({
+  utilityMeterId: z.string().min(1),
+  accountNumber: z.string().nullable().optional(),
+  assignedPartyType: z.string().min(1),
+  assignedPartyName: z.string().nullable().optional(),
+  tenantId: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export const utilityAccountUpdateSchema = z.object({
+  accountNumber: z.string().nullable().optional(),
+  assignedPartyType: z.string().min(1).optional(),
+  assignedPartyName: z.string().nullable().optional(),
+  tenantId: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  status: z.string().optional(),
+  closedWithBalance: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export const utilityCheckCreateSchema = z.object({
+  month: z.number().int().min(1).max(12),
+  year: z.number().int().min(2000).max(2099),
+  isPaid: z.boolean().optional(),
+  paidDate: z.string().nullable().optional(),
+  amount: z.number().min(0).nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export const utilityCheckUpdateSchema = z.object({
+  isPaid: z.boolean().optional(),
+  paidDate: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
 // ── Turnover Schemas ────────────────────────────────────────
+
+export const turnoverCreateSchema = z.object({
+  unitId: z.string().min(1),
+  buildingId: z.string().min(1),
+  moveOutDate: z.string().nullable().optional(),
+  moveOutSource: z.string().nullable().optional(),
+  assignedToUserId: z.string().nullable().optional(),
+});
+
+export const turnoverVendorCreateSchema = z.object({
+  vendorId: z.string().nullable().optional(),
+  vendorName: z.string().min(1),
+  trade: z.string().min(1),
+  scheduledDate: z.string().nullable().optional(),
+  cost: z.number().min(0).nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export const turnoverVendorUpdateSchema = z.object({
+  status: z.enum(["PENDING", "SCHEDULED", "COMPLETED"]).optional(),
+  scheduledDate: z.string().nullable().optional(),
+  completedDate: z.string().nullable().optional(),
+  cost: z.number().min(0).nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
 
 export const turnoverUpdateSchema = z.object({
   status: z.enum([
@@ -338,4 +422,63 @@ export const turnoverUpdateSchema = z.object({
   estimatedCost: z.number().min(0).nullable().optional(),
   listedDate: z.string().nullable().optional(),
   assignedToUserId: z.string().nullable().optional(),
+});
+
+// ── Collection Schemas ──────────────────────────────────────
+
+export const collectionNoteCreateSchema = z.object({
+  content: z.string().min(1),
+  actionType: z.enum([
+    "CALLED", "LEFT_VOICEMAIL", "TEXTED", "EMAILED", "NOTICE_SENT",
+    "PAYMENT_PLAN", "PARTIAL_PAYMENT", "PROMISE_TO_PAY", "SENT_TO_LEGAL", "OTHER",
+  ]),
+  followUpDate: z.string().nullable().optional(),
+});
+
+export const collectionStatusUpdateSchema = z.object({
+  status: z.enum([
+    "CURRENT", "LATE", "DELINQUENT", "CHRONIC",
+    "PAYMENT_PLAN", "LEGAL", "VACATE_PENDING",
+  ]),
+});
+
+// ── Legal Review Schema ─────────────────────────────────────
+
+export const legalReviewSchema = z.object({
+  queueId: z.string().min(1),
+  action: z.enum(["approve", "reject"]),
+  tenantId: z.string().optional(),
+});
+
+// ── Leasing Activity Schema ─────────────────────────────────
+
+export const leasingActivityCreateSchema = z.object({
+  unitId: z.string().min(1),
+  buildingId: z.string().min(1),
+  type: z.string().min(1),
+  description: z.string().nullable().optional(),
+  contactName: z.string().nullable().optional(),
+  contactInfo: z.string().nullable().optional(),
+});
+
+// ── Unit Schemas ────────────────────────────────────────────
+
+export const unitCreateSchema = z.object({
+  buildingId: z.string().min(1),
+  unitNumber: z.string().min(1),
+  unitType: z.string().nullable().optional(),
+});
+
+export const unitUpdateSchema = z.object({
+  unitNumber: z.string().min(1).optional(),
+  unitType: z.string().nullable().optional(),
+  isVacant: z.boolean().optional(),
+  askingRent: z.number().min(0).nullable().optional(),
+});
+
+// ── Deduplicate Schema ──────────────────────────────────────
+
+export const deduplicateMergeSchema = z.object({
+  keepId: z.string().min(1),
+  mergeIds: z.array(z.string().min(1)).min(1),
 });

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
+import { utilityCheckUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +22,11 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   if (check.utilityAccountId !== id) {
     return NextResponse.json({ error: "Check does not belong to this account" }, { status: 400 });
   }
-  if (!canAccessBuilding(user, check.account.meter.buildingId)) {
+  if (!(await canAccessBuilding(user, check.account.meter.buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { isPaid, paidDate, notes } = body;
+  const { isPaid, paidDate, notes } = await parseBody(req, utilityCheckUpdateSchema);
 
   const data: any = {};
   if (isPaid !== undefined) {

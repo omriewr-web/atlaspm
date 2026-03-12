@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { withAuth } from "@/lib/api-helpers";
+import { withAuth, parseBody } from "@/lib/api-helpers";
 import { canAccessBuilding } from "@/lib/data-scope";
+import { turnoverCreateSchema } from "@/lib/validations";
 import { listTurnovers, createTurnover } from "@/lib/services/turnover.service";
 
 export const dynamic = "force-dynamic";
@@ -14,13 +15,9 @@ export const GET = withAuth(async (req, { user }) => {
 }, "vac");
 
 export const POST = withAuth(async (req, { user }) => {
-  const body = await req.json();
-  const { unitId, buildingId, moveOutDate, moveOutSource, assignedToUserId } = body;
+  const { unitId, buildingId, moveOutDate, moveOutSource, assignedToUserId } = await parseBody(req, turnoverCreateSchema);
 
-  if (!unitId || !buildingId) {
-    return NextResponse.json({ error: "unitId and buildingId are required" }, { status: 400 });
-  }
-  if (!canAccessBuilding(user, buildingId)) {
+  if (!(await canAccessBuilding(user, buildingId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
