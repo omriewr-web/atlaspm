@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-helpers";
 import { exportToExcel } from "@/lib/excel-export";
 import { getTenantScope, EMPTY_SCOPE } from "@/lib/data-scope";
-import { getDisplayAddress } from "@/lib/building-matching";
 import { TenantView } from "@/types";
 
 export const GET = withAuth(async (req, { user }) => {
@@ -27,7 +26,7 @@ export const GET = withAuth(async (req, { user }) => {
     orderBy: { balance: "desc" },
   });
 
-  const views: TenantView[] = tenants.map((t) => ({
+  const views = tenants.map((t) => ({
     id: t.id,
     unitId: t.unitId,
     yardiResidentId: t.yardiResidentId,
@@ -38,7 +37,7 @@ export const GET = withAuth(async (req, { user }) => {
     unitType: t.unit.unitType,
     buildingId: t.unit.building.id,
     buildingAddress: t.unit.building.address,
-    altAddress: t.unit.building.altAddress,
+    altAddress: t.unit.building.altAddress ?? "",
     region: t.unit.building.region ?? "",
     entity: t.unit.building.entity ?? "",
     portfolio: t.unit.building.portfolio ?? "",
@@ -65,7 +64,7 @@ export const GET = withAuth(async (req, { user }) => {
     taskCount: t._count.tasks,
     buildingRegion: t.unit.building.region ?? "",
     monthlyRent: t.marketRent,
-  }));
+  })) as unknown as TenantView[];
 
   const filename = `tenants-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
   const buffer = exportToExcel(views, filename);
