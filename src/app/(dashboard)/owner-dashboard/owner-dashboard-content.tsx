@@ -26,7 +26,7 @@ type SortKey = "address" | "totalUnits" | "occupancyRate" | "arrears" | "openVio
 // ── Component ─────────────────────────────────────────────────
 
 export default function OwnerDashboardContent() {
-  const { data, isLoading } = useOwnerDashboard();
+  const { data, isLoading, isError } = useOwnerDashboard();
   const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>("arrears");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -43,7 +43,14 @@ export default function OwnerDashboardContent() {
     });
   }, [data, sortKey, sortDir]);
 
-  if (isLoading || !data) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton />;
+  if (isError || !data) return (
+    <div className="flex flex-col items-center justify-center py-20 text-text-muted">
+      <AlertTriangle className="w-10 h-10 mb-3 text-red-400" />
+      <p className="text-lg font-medium">Failed to load dashboard</p>
+      <p className="text-sm mt-1">Please try refreshing the page.</p>
+    </div>
+  );
 
   const p = data.portfolio;
   const trendIcon = p.arrearsTrend === "improving"

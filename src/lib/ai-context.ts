@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getBuildingScope, getTenantScope, canAccessBuilding, EMPTY_SCOPE } from "@/lib/data-scope";
+import { getBuildingIdScope, getTenantScope, canAccessBuilding, EMPTY_SCOPE } from "@/lib/data-scope";
 
 interface AiUser {
   role: string;
@@ -28,7 +28,7 @@ export async function buildPortfolioContext(user: AiUser, tenantId?: string): Pr
   }
 
   // Use shared data-scope helpers for building filter
-  const buildingScope = getBuildingScope(user);
+  const buildingScope = getBuildingIdScope(user);
   if (buildingScope === EMPTY_SCOPE) {
     return `No buildings accessible for user ${user.name || "unknown"} (${user.role}).`;
   }
@@ -46,6 +46,8 @@ export async function buildPortfolioContext(user: AiUser, tenantId?: string): Pr
     },
     orderBy: { address: "asc" },
   });
+
+  const buildingIds = buildings.map((b) => b.id);
 
   const buildingSummary = buildings.map((b) => {
     const occupied = b.units.filter((u) => !u.isVacant).length;
@@ -136,11 +138,7 @@ export async function buildPortfolioContext(user: AiUser, tenantId?: string): Pr
   const vacantUnits = await prisma.unit.findMany({
     where: {
       isVacant: true,
-      ...(buildingWhere.building
-        ? { building: (buildingWhere as any).building }
-        : buildingWhere.buildingId
-          ? { buildingId: (buildingWhere as any).buildingId }
-          : {}),
+      buildingId: { in: buildingIds },
     },
     include: {
       building: { select: { address: true } },
@@ -200,7 +198,7 @@ export async function buildPortfolioContext(user: AiUser, tenantId?: string): Pr
   const openWOs = await prisma.workOrder.findMany({
     where: {
       status: { in: ["OPEN", "IN_PROGRESS"] },
-      ...buildingWhere,
+      buildingId: { in: buildingIds },
     },
     include: {
       building: { select: { address: true } },
