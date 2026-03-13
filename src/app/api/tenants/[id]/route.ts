@@ -82,6 +82,47 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   });
 
   const tenant = await prisma.tenant.update({ where: { id }, data: updateData });
+
+  // Dual-write: sync Lease record
+  const unitInfo = await prisma.unit.findUnique({
+    where: { id: tenant.unitId },
+    select: { buildingId: true, building: { select: { organizationId: true } } },
+  });
+
+  await prisma.lease.upsert({
+    where: { id: `${id}-lease` },
+    create: {
+      id: `${id}-lease`,
+      organizationId: unitInfo?.building?.organizationId ?? null,
+      buildingId: unitInfo?.buildingId ?? null,
+      unitId: tenant.unitId,
+      tenantId: id,
+      isCurrent: true,
+      leaseStart: tenant.moveInDate,
+      leaseEnd: tenant.leaseExpiration,
+      moveInDate: tenant.moveInDate,
+      monthlyRent: Number(tenant.marketRent),
+      legalRent: Number(tenant.legalRent),
+      securityDeposit: Number(tenant.deposit),
+      isStabilized: tenant.isStabilized,
+      status: tenant.leaseExpiration
+        ? (tenant.leaseExpiration < new Date() ? "EXPIRED" : "ACTIVE")
+        : "MONTH_TO_MONTH",
+    },
+    update: {
+      leaseStart: tenant.moveInDate,
+      leaseEnd: tenant.leaseExpiration,
+      moveInDate: tenant.moveInDate,
+      monthlyRent: Number(tenant.marketRent),
+      legalRent: Number(tenant.legalRent),
+      securityDeposit: Number(tenant.deposit),
+      isStabilized: tenant.isStabilized,
+      status: tenant.leaseExpiration
+        ? (tenant.leaseExpiration < new Date() ? "EXPIRED" : "ACTIVE")
+        : "MONTH_TO_MONTH",
+    },
+  });
+
   return NextResponse.json(tenant);
 }, "edit");
 
@@ -94,6 +135,16 @@ export const DELETE = withAuth(async (req, { user, params }) => {
   if (!tenant) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.$transaction(async (tx) => {
+    // End the associated lease (if any) before deleting tenant
+    const leaseId = `${id}-lease`;
+    const existingLease = await tx.lease.findUnique({ where: { id: leaseId } });
+    if (existingLease) {
+      await tx.lease.update({
+        where: { id: leaseId },
+        data: { isCurrent: false, status: "TERMINATED", moveOutDate: new Date() },
+      });
+    }
+
     await tx.tenant.delete({ where: { id } });
     // Mark unit as vacant
     await tx.unit.update({ where: { id: tenant.unitId }, data: { isVacant: true } });

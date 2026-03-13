@@ -172,6 +172,33 @@ export const POST = withAuth(async (req, { user }) => {
       },
     });
 
+    // Dual-write: create Lease record
+    const buildingInfo = await tx.building.findUnique({
+      where: { id: data.buildingId },
+      select: { organizationId: true },
+    });
+
+    await tx.lease.upsert({
+      where: { id: `${created.id}-lease` },
+      create: {
+        id: `${created.id}-lease`,
+        organizationId: buildingInfo?.organizationId ?? null,
+        buildingId: data.buildingId,
+        unitId: unit.id,
+        tenantId: created.id,
+        isCurrent: true,
+        leaseStart: data.moveInDate ? new Date(data.moveInDate) : null,
+        leaseEnd: leaseExp,
+        moveInDate: data.moveInDate ? new Date(data.moveInDate) : null,
+        monthlyRent: data.marketRent ?? 0,
+        legalRent: data.legalRent ?? 0,
+        securityDeposit: data.deposit ?? 0,
+        isStabilized: data.isStabilized ?? false,
+        status: leaseExp ? (leaseExp < new Date() ? "EXPIRED" : "ACTIVE") : "MONTH_TO_MONTH",
+      },
+      update: {},
+    });
+
     // Mark unit as occupied
     await tx.unit.update({ where: { id: unit.id }, data: { isVacant: false } });
 
