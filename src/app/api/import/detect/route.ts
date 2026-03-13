@@ -28,6 +28,11 @@ export const POST = withAuth(async (req: NextRequest) => {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
+  // File size limit: 10MB
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 413 });
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
 
   // Try rent roll first (most common)

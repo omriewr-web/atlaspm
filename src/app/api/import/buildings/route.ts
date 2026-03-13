@@ -20,6 +20,11 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
+  // File size limit: 10MB
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 413 });
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = parseBuildingDataExcel(buffer);
 
@@ -28,6 +33,11 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
       error: "No building data found in file",
       errors: result.errors,
     }, { status: 400 });
+  }
+
+  // Row count limit: 5000
+  if (result.buildings.length > 5000) {
+    return NextResponse.json({ error: "Too many rows (max 5000)" }, { status: 413 });
   }
 
   // Load existing buildings for matching (scoped to user's org)
@@ -81,43 +91,45 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     });
   }
 
-  // ── Confirm mode: actually import ──
+  // ── Confirm mode: actually import (wrapped in transaction) ──
   let created = 0;
   let updated = 0;
   const importErrors: string[] = [...result.errors];
 
-  for (let i = 0; i < result.buildings.length; i++) {
-    const row = result.buildings[i];
-    const previewRow = preview[i];
-    const prismaData = buildingRowToPrismaData(row);
+  await prisma.$transaction(async (tx) => {
+    for (let i = 0; i < result.buildings.length; i++) {
+      const row = result.buildings[i];
+      const previewRow = preview[i];
+      const prismaData = buildingRowToPrismaData(row);
 
-    try {
-      if (previewRow.action === "update" && previewRow.existingId) {
-        await prisma.building.update({
-          where: { id: previewRow.existingId },
-          data: prismaData,
-        });
-        updated++;
-      } else {
-        // Use building_id from template as yardiId, or generate one
-        const yardiId = row.buildingId || generateYardiId(row.address);
-        const propertyId = generatePropertyId(row.address);
-        await prisma.building.create({
-          data: {
-            ...prismaData,
-            yardiId,
-            propertyId,
-            address: row.address,
-            organizationId: user.organizationId,
-          } as any,
-        });
-        created++;
+      try {
+        if (previewRow.action === "update" && previewRow.existingId) {
+          await tx.building.update({
+            where: { id: previewRow.existingId },
+            data: prismaData,
+          });
+          updated++;
+        } else {
+          // Use building_id from template as yardiId, or generate one
+          const yardiId = row.buildingId || generateYardiId(row.address);
+          const propertyId = generatePropertyId(row.address);
+          await tx.building.create({
+            data: {
+              ...prismaData,
+              yardiId,
+              propertyId,
+              address: row.address,
+              organizationId: user.organizationId,
+            } as any,
+          });
+          created++;
+        }
+      } catch (err: any) {
+        const detail = err.meta?.target || err.meta?.field_name || "";
+        importErrors.push(`Row ${row.rowIndex} (${row.address}): ${err.message}${detail ? ` [field: ${detail}]` : ""}`);
       }
-    } catch (err: any) {
-      const detail = err.meta?.target || err.meta?.field_name || "";
-      importErrors.push(`Row ${row.rowIndex} (${row.address}): ${err.message}${detail ? ` [field: ${detail}]` : ""}`);
     }
-  }
+  });
 
   // Log the import batch
   await prisma.importBatch.create({

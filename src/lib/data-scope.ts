@@ -15,7 +15,7 @@ import { prisma } from "./prisma";
 interface ScopeUser {
   role: string;
   assignedProperties?: string[] | null;
-  organizationId?: string;
+  organizationId?: string | null;
 }
 
 // Roles that have full access to all buildings within their org
@@ -31,9 +31,9 @@ type ScopeResult = Record<string, unknown> | typeof EMPTY_SCOPE;
  * SUPER_ADMIN gets no filter (sees all orgs).
  * All other roles get { organizationId: user.organizationId }.
  */
-export function getOrgScope(user: ScopeUser): Record<string, string> | Record<string, never> {
+export function getOrgScope(user: ScopeUser): Record<string, unknown> {
   if (user.role === "SUPER_ADMIN") return {};
-  return { organizationId: user.organizationId || "org_default" };
+  return { organizationId: user.organizationId };
 }
 
 /**

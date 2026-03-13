@@ -12,5 +12,5 @@ export interface CommitResult {
 export interface CommitContext {
   importBatchId: string;
   userId: string;
-  organizationId?: string;
+  organizationId?: string | null;
 }

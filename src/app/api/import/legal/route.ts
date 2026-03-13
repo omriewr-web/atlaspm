@@ -64,6 +64,11 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
 
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
+  // File size limit: 10MB
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 413 });
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -71,6 +76,11 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
 
   if (rows.length === 0) {
     return NextResponse.json({ error: "No rows found in spreadsheet" }, { status: 400 });
+  }
+
+  // Row count limit: 5000
+  if (rows.length > 5000) {
+    return NextResponse.json({ error: "Too many rows (max 5000)" }, { status: 413 });
   }
 
   // Build lookup maps (scoped to user's org)

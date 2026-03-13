@@ -46,6 +46,11 @@ export const POST = withAuth(async (req, { user }) => {
   const file = formData.get("file") as File;
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
+  // File size limit: 10MB
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 413 });
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
 
   // Run analysis pipeline to get mappings
@@ -211,6 +216,11 @@ export const POST = withAuth(async (req, { user }) => {
 
   if (parsedRows.length === 0) {
     return NextResponse.json({ error: "No valid rows found after parsing", warnings: analysis.warnings }, { status: 422 });
+  }
+
+  // Row count limit: 5000
+  if (parsedRows.length > 5000) {
+    return NextResponse.json({ error: "Too many rows (max 5000)" }, { status: 413 });
   }
 
   // Commit directly

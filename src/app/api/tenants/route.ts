@@ -120,22 +120,6 @@ export const POST = withAuth(async (req, { user }) => {
   const accessErr = await assertBuildingAccess(user, data.buildingId);
   if (accessErr) return accessErr;
 
-  // Find or create unit
-  let unit = await prisma.unit.findUnique({
-    where: { buildingId_unitNumber: { buildingId: data.buildingId, unitNumber: data.unitNumber } },
-  });
-  if (!unit) {
-    unit = await prisma.unit.create({
-      data: { buildingId: data.buildingId, unitNumber: data.unitNumber },
-    });
-  }
-
-  // Check if unit already has a tenant
-  const existingTenant = await prisma.tenant.findUnique({ where: { unitId: unit.id } });
-  if (existingTenant) {
-    return NextResponse.json({ error: "Unit already has a tenant" }, { status: 400 });
-  }
-
   const balance = 0;
   const marketRent = data.marketRent ?? 0;
   const leaseExp = data.leaseExpiration ? new Date(data.leaseExpiration) : null;
@@ -148,29 +132,51 @@ export const POST = withAuth(async (req, { user }) => {
     legalFlag: false, legalRecommended: false, isVacant: false,
   });
 
-  const tenant = await prisma.tenant.create({
-    data: {
-      unitId: unit.id,
-      name: data.name,
-      email: data.email ?? null,
-      phone: data.phone ?? null,
-      marketRent: data.marketRent ?? 0,
-      legalRent: data.legalRent ?? 0,
-      deposit: data.deposit ?? 0,
-      chargeCode: data.chargeCode ?? null,
-      isStabilized: data.isStabilized ?? false,
-      leaseExpiration: leaseExp,
-      moveInDate: data.moveInDate ? new Date(data.moveInDate) : null,
-      arrearsCategory,
-      arrearsDays,
-      leaseStatus,
-      collectionScore,
-      monthsOwed: 0,
-    },
-  });
+  const tenant = await prisma.$transaction(async (tx) => {
+    // Find or create unit
+    let unit = await tx.unit.findUnique({
+      where: { buildingId_unitNumber: { buildingId: data.buildingId, unitNumber: data.unitNumber } },
+    });
+    if (!unit) {
+      unit = await tx.unit.create({
+        data: { buildingId: data.buildingId, unitNumber: data.unitNumber },
+      });
+    }
 
-  // Mark unit as occupied
-  await prisma.unit.update({ where: { id: unit.id }, data: { isVacant: false } });
+    // Check if unit already has a tenant
+    const existingTenant = await tx.tenant.findUnique({ where: { unitId: unit.id } });
+    if (existingTenant) {
+      const err: any = new Error("Unit already has a tenant");
+      err.status = 400;
+      throw err;
+    }
+
+    const created = await tx.tenant.create({
+      data: {
+        unitId: unit.id,
+        name: data.name,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
+        marketRent: data.marketRent ?? 0,
+        legalRent: data.legalRent ?? 0,
+        deposit: data.deposit ?? 0,
+        chargeCode: data.chargeCode ?? null,
+        isStabilized: data.isStabilized ?? false,
+        leaseExpiration: leaseExp,
+        moveInDate: data.moveInDate ? new Date(data.moveInDate) : null,
+        arrearsCategory,
+        arrearsDays,
+        leaseStatus,
+        collectionScore,
+        monthsOwed: 0,
+      },
+    });
+
+    // Mark unit as occupied
+    await tx.unit.update({ where: { id: unit.id }, data: { isVacant: false } });
+
+    return created;
+  });
 
   return NextResponse.json(tenant, { status: 201 });
 }, "edit");

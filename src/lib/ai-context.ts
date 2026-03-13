@@ -5,7 +5,7 @@ interface AiUser {
   role: string;
   name?: string;
   assignedProperties?: string[] | null;
-  organizationId?: string;
+  organizationId?: string | null;
 }
 
 function fmt$(n: number | any): string {

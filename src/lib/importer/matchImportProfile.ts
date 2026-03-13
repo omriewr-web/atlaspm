@@ -102,7 +102,7 @@ export async function matchImportProfile(
  * Save or update an import profile after confirmed import.
  */
 export async function saveImportProfile(opts: {
-  organizationId?: string;
+  organizationId?: string | null;
   name: string;
   importType: string;
   sheetNamePattern?: string;

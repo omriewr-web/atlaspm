@@ -203,7 +203,7 @@ export function findMatchingBuilding(
   return null;
 }
 
-export async function fetchBuildingsForMatching(organizationId?: string) {
+export async function fetchBuildingsForMatching(organizationId?: string | null) {
   return prisma.building.findMany({
     where: organizationId ? { organizationId } : {},
     select: {

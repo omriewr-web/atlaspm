@@ -31,7 +31,7 @@ function guessImportCategory(fileType: ImportFileType): "tenant" | "building" {
 export async function analyzeImport(
   buffer: Buffer,
   fileName: string,
-  opts?: { importType?: string; organizationId?: string },
+  opts?: { importType?: string; organizationId?: string | null },
 ): Promise<ImportAnalysisResult> {
   // 1. Parse file
   const parsed = parseImportFile(buffer, fileName);

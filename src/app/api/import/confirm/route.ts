@@ -132,7 +132,7 @@ async function parseAndMatchRows(
   buffer: Buffer,
   mapping: ColumnMappingEntry[],
   dataStartRow: number,
-  organizationId?: string,
+  organizationId?: string | null,
 ): Promise<{ rows: ParsedRow[]; summary: { total: number; newTenants: number; updates: number; vacancies: number; errors: number; buildings: string[] } }> {
   const wb = XLSX.read(buffer, { type: "buffer", cellDates: true });
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -332,6 +332,11 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  // File size limit: 10MB
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 413 });
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
   const mapping: ColumnMappingEntry[] = JSON.parse(columnMappingRaw);
   const dataStartRow = parseInt(dataStartRowRaw, 10);
@@ -342,6 +347,11 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
 
   // Parse and match all rows
   const { rows, summary } = await parseAndMatchRows(buffer, mapping, dataStartRow, user.organizationId);
+
+  // Row count limit: 5000
+  if (rows.length > 5000) {
+    return NextResponse.json({ error: "Too many rows (max 5000)" }, { status: 413 });
+  }
 
   // ── STAGING MODE (default for types that require review) ──
   if (mode === "stage" || (mode !== "direct" && contract.requiresReview)) {
@@ -382,7 +392,7 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
   try {
     const importRun = await prisma.importRun.create({
       data: {
-        organizationId: user.organizationId, fileName: file.name,
+        organizationId: user.organizationId ?? undefined, fileName: file.name,
         importType: fileType ?? "tenant_list",
         matchedProfileId: matchedProfileId ?? undefined,
         aiUsed, status: "processing",

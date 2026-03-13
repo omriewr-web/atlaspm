@@ -93,10 +93,11 @@ export const DELETE = withAuth(async (req, { user, params }) => {
   const tenant = await prisma.tenant.findUnique({ where: { id } });
   if (!tenant) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.tenant.delete({ where: { id } });
-
-  // Mark unit as vacant
-  await prisma.unit.update({ where: { id: tenant.unitId }, data: { isVacant: true } });
+  await prisma.$transaction(async (tx) => {
+    await tx.tenant.delete({ where: { id } });
+    // Mark unit as vacant
+    await tx.unit.update({ where: { id: tenant.unitId }, data: { isVacant: true } });
+  });
 
   return NextResponse.json({ success: true });
 }, "edit");

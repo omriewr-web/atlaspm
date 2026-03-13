@@ -9,7 +9,7 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   assignedProperties: string[];
-  organizationId: string;
+  organizationId: string | null;
   managerId: string | null;
 }
 
@@ -28,9 +28,12 @@ export function withAuth(handler: ApiHandler, perm?: string) {
         email: session.user.email ?? "",
         role: session.user.role as UserRole,
         assignedProperties: session.user.assignedProperties ?? [],
-        organizationId: session.user.organizationId ?? "org_default",
+        organizationId: session.user.organizationId ?? "",
         managerId: session.user.managerId ?? null,
       };
+      if (!user.organizationId && user.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "Organization not configured" }, { status: 401 });
+      }
       if (perm && !hasPermission(user.role, perm)) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }

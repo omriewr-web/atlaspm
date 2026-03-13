@@ -7,7 +7,7 @@ import type { CollectionActionType, Prisma } from "@prisma/client";
 interface ScopeUser {
   role: string;
   assignedProperties?: string[] | null;
-  organizationId?: string;
+  organizationId?: string | null;
 }
 
 class ApiError extends Error {
