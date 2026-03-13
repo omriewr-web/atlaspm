@@ -493,6 +493,25 @@ export const assignBuildingsSchema = z.object({
   buildingIds: z.array(z.string()),
 });
 
+// ── Lease Schemas ───────────────────────────────────────────
+
+export const leaseCreateSchema = z.object({
+  organizationId: z.string().min(1),
+  buildingId: z.string().min(1),
+  unitId: z.string().min(1),
+  tenantId: z.string().min(1),
+  monthlyRent: z.number().min(0),
+  chargeCode: z.string().nullable().optional(),
+  securityDeposit: z.number().min(0).optional().default(0),
+  moveInDate: z.string().nullable().optional(),
+  leaseEnd: z.string().nullable().optional(),
+  currentBalance: z.number().default(0),
+  status: z.enum(["ACTIVE", "EXPIRED", "MONTH_TO_MONTH", "RENEWED", "TERMINATED", "PENDING"]).default("ACTIVE"),
+  isCurrent: z.boolean().default(false),
+});
+
+export const leaseUpdateSchema = leaseCreateSchema.partial();
+
 // ── Deduplicate Schema ──────────────────────────────────────
 
 export const deduplicateMergeSchema = z.object({

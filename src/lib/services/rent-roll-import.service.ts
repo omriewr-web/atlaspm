@@ -249,6 +249,7 @@ export async function importRentRollData(
       }
       if (row.moveOutDate) leaseUpdate.moveOutDate = row.moveOutDate;
       if (rentAmount) leaseUpdate.monthlyRent = rentAmount;
+      leaseUpdate.currentBalance = row.currentBalance;
       // Ensure new fields are populated
       if (!activeLease.id.endsWith("-lease")) {
         leaseUpdate.buildingId = buildingId;
@@ -277,6 +278,7 @@ export async function importRentRollData(
           moveInDate: row.moveInDate ?? null,
           moveOutDate: row.moveOutDate ?? null,
           monthlyRent: rentAmount || 0,
+          currentBalance: row.currentBalance,
           status: leaseStatus as any,
         },
         update: {
@@ -285,6 +287,7 @@ export async function importRentRollData(
           moveInDate: row.moveInDate ?? undefined,
           moveOutDate: row.moveOutDate ?? undefined,
           monthlyRent: rentAmount || undefined,
+          currentBalance: row.currentBalance,
         },
       });
     }

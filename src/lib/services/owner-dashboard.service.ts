@@ -175,6 +175,7 @@ export async function getOwnerDashboard(user: ScopeUser): Promise<OwnerDashboard
     .filter((t) => !t.unit.isVacant && t.unit.isResidential)
     .reduce((s, t) => s + Number(t.actualRent || t.marketRent), 0);
 
+  // TODO Phase 2: migrate to Lease.currentBalance once backfill is verified
   const totalArrears = tenants.reduce((s, t) => s + Math.max(0, Number(t.balance)), 0);
 
   // Trend: compare to prior month

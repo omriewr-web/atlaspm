@@ -104,6 +104,8 @@ export const PATCH = withAuth(async (req, { user, params }) => {
       monthlyRent: Number(tenant.marketRent),
       legalRent: Number(tenant.legalRent),
       securityDeposit: Number(tenant.deposit),
+      currentBalance: Number(tenant.balance),
+      chargeCode: tenant.chargeCode ?? null,
       isStabilized: tenant.isStabilized,
       status: tenant.leaseExpiration
         ? (tenant.leaseExpiration < new Date() ? "EXPIRED" : "ACTIVE")
@@ -116,6 +118,8 @@ export const PATCH = withAuth(async (req, { user, params }) => {
       monthlyRent: Number(tenant.marketRent),
       legalRent: Number(tenant.legalRent),
       securityDeposit: Number(tenant.deposit),
+      currentBalance: Number(tenant.balance),
+      chargeCode: tenant.chargeCode ?? null,
       isStabilized: tenant.isStabilized,
       status: tenant.leaseExpiration
         ? (tenant.leaseExpiration < new Date() ? "EXPIRED" : "ACTIVE")

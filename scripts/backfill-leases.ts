@@ -38,6 +38,8 @@ async function main() {
       legalRent: true,
       prefRent: true,
       deposit: true,
+      balance: true,
+      chargeCode: true,
       moveInDate: true,
       leaseExpiration: true,
       moveOutDate: true,
@@ -71,6 +73,16 @@ async function main() {
     const leaseId = `${t.id}-lease`;
 
     if (existingLeaseIds.has(leaseId)) {
+      // Patch existing leases to populate currentBalance/chargeCode if missing
+      if (!dryRun) {
+        await prisma.lease.update({
+          where: { id: leaseId },
+          data: {
+            currentBalance: t.balance,
+            chargeCode: t.chargeCode ?? null,
+          },
+        });
+      }
       skipped++;
       continue;
     }
@@ -111,6 +123,8 @@ async function main() {
           legalRent: t.legalRent,
           preferentialRent: t.prefRent,
           securityDeposit: t.deposit,
+          currentBalance: t.balance,
+          chargeCode: t.chargeCode ?? null,
           isStabilized: t.isStabilized,
           status: status as any,
         },
@@ -122,7 +136,7 @@ async function main() {
 
   console.log("\n" + "=".repeat(60));
   console.log(
-    `Results: ${created} ${dryRun ? "would be created" : "created"}, ${skipped} skipped (already had lease)`,
+    `Results: ${created} ${dryRun ? "would be created" : "created"}, ${skipped} patched/skipped (already had lease)`,
   );
 
   if (warnings.length > 0) {

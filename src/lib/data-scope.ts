@@ -130,6 +130,36 @@ export function getTenantScope(user: ScopeUser, explicitBuildingId?: string | nu
   return { unit: { buildingId: { in: assigned } } };
 }
 
+/**
+ * Returns a Prisma where clause for Lease queries (scoped through buildingId).
+ * Leases have a direct buildingId FK, so scoping is simpler than tenants.
+ */
+export function getLeaseScope(user: ScopeUser, explicitBuildingId?: string | null): ScopeResult {
+  if (explicitBuildingId) {
+    if (user.role === "SUPER_ADMIN") {
+      return { buildingId: explicitBuildingId };
+    }
+    if (FULL_ORG_ROLES.includes(user.role)) {
+      return { buildingId: explicitBuildingId, organizationId: user.organizationId };
+    }
+    const assigned = user.assignedProperties ?? [];
+    if (assigned.length === 0 || !assigned.includes(explicitBuildingId)) {
+      return EMPTY_SCOPE;
+    }
+    return { buildingId: explicitBuildingId };
+  }
+
+  if (user.role === "SUPER_ADMIN") return {};
+  if (FULL_ORG_ROLES.includes(user.role)) {
+    return { organizationId: user.organizationId };
+  }
+
+  const assigned = user.assignedProperties ?? [];
+  if (assigned.length === 0) return EMPTY_SCOPE;
+
+  return { buildingId: { in: assigned } };
+}
+
 // ── Ownership verification helpers for detail routes ─────────────
 
 /**

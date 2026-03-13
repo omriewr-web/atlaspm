@@ -193,6 +193,8 @@ export const POST = withAuth(async (req, { user }) => {
         monthlyRent: data.marketRent ?? 0,
         legalRent: data.legalRent ?? 0,
         securityDeposit: data.deposit ?? 0,
+        currentBalance: 0,
+        chargeCode: data.chargeCode ?? null,
         isStabilized: data.isStabilized ?? false,
         status: leaseExp ? (leaseExp < new Date() ? "EXPIRED" : "ACTIVE") : "MONTH_TO_MONTH",
       },

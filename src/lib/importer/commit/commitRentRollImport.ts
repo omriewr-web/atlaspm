@@ -229,6 +229,8 @@ export async function commitRentRollImport(
           legalRent: 0,
           preferentialRent: 0,
           securityDeposit: t.deposit,
+          currentBalance: t.balance,
+          chargeCode: t.chargeCode ?? null,
           status: normalizedLeaseStatus as any,
           isStabilized: false,
         },
@@ -242,6 +244,8 @@ export async function commitRentRollImport(
           moveOutDate: t.moveOut ? new Date(t.moveOut) : null,
           monthlyRent: t.marketRent,
           securityDeposit: t.deposit,
+          currentBalance: t.balance,
+          chargeCode: t.chargeCode ?? null,
           status: normalizedLeaseStatus as any,
         },
       });
