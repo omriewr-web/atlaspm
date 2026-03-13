@@ -231,7 +231,8 @@ export async function importRentRollData(
       result.updated++;
     }
 
-    // ── Update active lease if exists ──
+    // ── Dual-write: Lease sync ──
+    const rentAmount = row.chargeAmount || row.marketRent;
     const activeLease = await prisma.lease.findFirst({
       where: { tenantId, status: "ACTIVE" },
       select: { id: true, leaseEnd: true, leaseStart: true },
@@ -244,13 +245,48 @@ export async function importRentRollData(
       }
       if (row.moveInDate && (!activeLease.leaseStart || row.moveInDate.getTime() !== activeLease.leaseStart.getTime())) {
         leaseUpdate.leaseStart = row.moveInDate;
+        leaseUpdate.moveInDate = row.moveInDate;
       }
-      const rentAmount = row.chargeAmount || row.marketRent;
+      if (row.moveOutDate) leaseUpdate.moveOutDate = row.moveOutDate;
       if (rentAmount) leaseUpdate.monthlyRent = rentAmount;
+      // Ensure new fields are populated
+      if (!activeLease.id.endsWith("-lease")) {
+        leaseUpdate.buildingId = buildingId;
+        leaseUpdate.isCurrent = true;
+      }
 
       if (Object.keys(leaseUpdate).length > 0) {
         await prisma.lease.update({ where: { id: activeLease.id }, data: leaseUpdate });
       }
+    } else {
+      // No active lease — create one
+      const leaseStatus = row.leaseExpiration
+        ? (row.leaseExpiration < new Date() ? "EXPIRED" : "ACTIVE")
+        : "MONTH_TO_MONTH";
+
+      await prisma.lease.upsert({
+        where: { id: `${tenantId}-lease` },
+        create: {
+          id: `${tenantId}-lease`,
+          unitId,
+          tenantId,
+          buildingId,
+          isCurrent: true,
+          leaseStart: row.moveInDate ?? null,
+          leaseEnd: row.leaseExpiration ?? null,
+          moveInDate: row.moveInDate ?? null,
+          moveOutDate: row.moveOutDate ?? null,
+          monthlyRent: rentAmount || 0,
+          status: leaseStatus as any,
+        },
+        update: {
+          leaseStart: row.moveInDate ?? undefined,
+          leaseEnd: row.leaseExpiration ?? undefined,
+          moveInDate: row.moveInDate ?? undefined,
+          moveOutDate: row.moveOutDate ?? undefined,
+          monthlyRent: rentAmount || undefined,
+        },
+      });
     }
   }
 
